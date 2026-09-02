@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 
 type Lead = {
@@ -230,6 +231,10 @@ export default function Dashboard() {
               {userEmail}
             </span>
           )}
+
+          <Link href="/prospects" className="lp-link-btn">
+            🔍 Prospect Finder
+          </Link>
 
           <button className="btn" type="button" onClick={signOut}>
             Çıkış yap

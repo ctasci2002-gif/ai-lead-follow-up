@@ -15,6 +15,7 @@ Set these in `.env.local` (never commit this file):
 | `RESEND_API_KEY` | Sending reminder emails via [Resend](https://resend.com) | server-only |
 | `EMAIL_FROM` | Optional sender address, e.g. `AI Lead Follow-Up <you@yourdomain.com>` | defaults to Resend's sandbox sender `onboarding@resend.dev` if unset |
 | `CRON_SECRET` | Shared secret that protects `/api/send-daily-reminders` from being triggered by anyone else | any random string |
+| `TAVILY_API_KEY` | Web search for AI Prospect Finder ([tavily.com](https://tavily.com)) | server-only |
 
 ## Daily follow-up reminder emails
 
@@ -32,3 +33,13 @@ curl -X POST http://localhost:3000/api/send-daily-reminders \
 Response is a JSON summary, e.g. `{"usersWithDueLeads":1,"emailsSent":1,"failures":[]}`. A non-empty `failures` array (per user id) means the digest wasn't actually delivered to that user — check `error` for why (e.g. Resend's sandbox mode only delivers to the account's own signup email until a sending domain is verified at resend.com/domains).
 
 **Running it daily:** this route doesn't schedule itself — point any scheduler (Vercel Cron, a GitHub Actions cron workflow, an external uptime/cron pinger, etc.) at it once a day with the `x-cron-secret` header set to `CRON_SECRET`.
+
+## AI Prospect Finder
+
+`/prospects` (protected, signed-in users only) lets a user describe a target company profile (location, industry, company size, or free text) and get back AI-scored, AI-analyzed prospect companies.
+
+Flow: [Tavily](https://tavily.com) search → dedupe by domain against the user's existing `prospects` and `leads` → **one** batched Claude call analyzes every candidate at once (not one call per company) and returns a score, reason, and a personalized outreach message per company, built only from what the search results actually say. Results are stored per-user in a new `prospects` table (RLS-scoped, same pattern as `leads`) and can be converted into a real lead with one click ("Lead'e Kaydet"), which just inserts into the existing `leads` table via the normal browser client — there's no separate/parallel CRM.
+
+A server-side daily quota (20 prospects/user/day, counted from the `prospects` table) is enforced in `app/api/prospects/search/route.ts` before any search or Claude call is made, so it can't be bypassed from the client and doesn't burn API budget once exhausted.
+
+Run the `prospects` table SQL from `supabase/schema.sql` once in the Supabase SQL editor before using this feature.
