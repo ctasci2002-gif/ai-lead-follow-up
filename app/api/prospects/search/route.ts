@@ -5,6 +5,7 @@ import {
   analyzeProspects,
   extractDomain,
   parseSizeNumbers,
+  extractEmail,
 } from "../../../../lib/prospects";
 
 const DAILY_LIMIT = 20;
@@ -142,6 +143,21 @@ export async function POST(req: Request) {
       return Response.json({ prospects: [] });
     }
 
+    // Deterministic email discovery — scans each candidate's actual fetched
+    // content for a literal email address (no AI, no guessing, no new
+    // search call). Matched back onto analyzed prospects by source URL below.
+    const candidateEmails = new Map<string, string>();
+    for (const c of candidates) {
+      const email = extractEmail(c.content);
+      if (email) candidateEmails.set(c.url, email);
+    }
+    console.log(
+      "[prospects] emails found in raw content:",
+      candidateEmails.size,
+      "/",
+      candidates.length
+    );
+
     const rawAnalyzed = await analyzeProspects(candidates, {
       location,
       industry,
@@ -158,11 +174,29 @@ export async function POST(req: Request) {
       const sourceIsReal = !!p.size_source && candidateUrls.has(p.size_source);
       const verified = !!p.company_size_verified && sourceIsReal;
 
+      let companyEmail: string | null = null;
+      let companyEmailSource: string | null = null;
+
+      for (const url of p.source_urls || []) {
+        const found = candidateEmails.get(url);
+        if (found) {
+          companyEmail = found;
+          companyEmailSource = url;
+          break;
+        }
+      }
+
       return {
         ...p,
         company_size: verified && p.company_size ? p.company_size : "Unknown",
         company_size_verified: verified,
         size_source: verified ? p.size_source : null,
+        company_email: companyEmail,
+        company_email_source: companyEmailSource,
+        // Decision-maker personal emails are never fabricated or inferred
+        // from a name+domain guess — only ever set if a future, stricter
+        // signal justifies it. For now this stays honestly "not found".
+        decision_maker_email: null,
       };
     });
 
@@ -224,11 +258,18 @@ export async function POST(req: Request) {
     const finalResults = analyzed.slice(0, maxResults);
     console.log("[prospects] final count after trimming to maxResults:", finalResults.length);
 
+    let emailsFound = 0;
+
     for (const p of finalResults) {
+      if (p.company_email) emailsFound += 1;
       console.log(
-        `[prospects] Company: ${p.company_name} | Company Size: ${p.company_size} | Size Source: ${p.size_source || "Unverified"} | Score: ${p.prospect_score}`
+        `[prospects] Company: ${p.company_name} | Company Size: ${p.company_size} | Size Source: ${p.size_source || "Unverified"} | Email: ${p.company_email || "Not found"} | Email Source: ${p.company_email_source || "-"} | Score: ${p.prospect_score}`
       );
     }
+
+    console.log(
+      `[prospects] emails found: ${emailsFound} / ${finalResults.length} not found: ${finalResults.length - emailsFound}`
+    );
 
     const rows = finalResults.map((p) => ({
       user_id: user.id,
@@ -238,8 +279,11 @@ export async function POST(req: Request) {
       industry: p.industry,
       company_size: p.company_size,
       size_source: p.size_source,
+      company_email: p.company_email,
+      company_email_source: p.company_email_source,
       decision_maker_name: p.decision_maker_name,
       decision_maker_role: p.decision_maker_role,
+      decision_maker_email: p.decision_maker_email,
       prospect_score: p.prospect_score,
       score_reason: p.score_reason,
       outreach_message: p.outreach_message,

@@ -12,8 +12,11 @@ type Prospect = {
   industry: string | null;
   company_size: string | null;
   size_source: string | null;
+  company_email: string | null;
+  company_email_source: string | null;
   decision_maker_name: string | null;
   decision_maker_role: string | null;
+  decision_maker_email: string | null;
   prospect_score: number;
   score_reason: string;
   outreach_message: string;
@@ -64,6 +67,13 @@ export default function MarketingPage() {
 
     const list = (prospectData || []) as Prospect[];
     setProspects(list);
+
+    const foundEmails: Record<string, string> = {};
+    for (const p of list) {
+      const email = p.decision_maker_email || p.company_email;
+      if (email) foundEmails[p.id] = email;
+    }
+    setRecipients((prev) => ({ ...foundEmails, ...prev }));
 
     if (list.length > 0) {
       const { data: messageData } = await supabase
@@ -230,6 +240,31 @@ export default function MarketingPage() {
             ? `Decision Maker: ${p.decision_maker_name}${p.decision_maker_role ? ` — ${p.decision_maker_role}` : ""}`
             : "Decision maker not found"}
         </div>
+
+        <div className="temperature" style={{ marginTop: 8 }}>
+          Recipient: {p.decision_maker_email || p.company_email || "Not found"}
+          {(p.decision_maker_email || p.company_email) && p.company_email_source && (
+            <>
+              {" "}
+              ·{" "}
+              <a
+                href={p.company_email_source}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                style={{ color: "inherit" }}
+              >
+                Source
+              </a>
+            </>
+          )}
+        </div>
+
+        {!p.decision_maker_email && !p.company_email && (
+          <p className="error" style={{ fontSize: 13 }}>
+            Verified email bulunamadı. Bu prospect için email gönderimi
+            devre dışı (alıcı adresini elle girmedikçe).
+          </p>
+        )}
 
         {p.website && (
           <p className="subtitle" style={{ marginTop: 12 }}>

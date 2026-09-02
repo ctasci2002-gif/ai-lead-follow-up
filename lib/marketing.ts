@@ -64,13 +64,23 @@ KURALLAR:
 - Sonunda kısa bir call-to-action olsun (örn. kısa bir görüşme teklifi).
 - İmza olarak "Best,\\n${senderEmail}" kullan.
 
-Çıktıyı SADECE aşağıdaki JSON formatında döndür, başka açıklama ekleme:
-
-{
-  "subject": "...",
-  "body": "..."
-}
+return_email tool'unu çağırarak sonucu döndür.
 `,
+    tools: [
+      {
+        name: "return_email",
+        description: "Oluşturulan cold email'i subject ve body olarak döndürür.",
+        input_schema: {
+          type: "object",
+          properties: {
+            subject: { type: "string" },
+            body: { type: "string" },
+          },
+          required: ["subject", "body"],
+        },
+      },
+    ],
+    tool_choice: { type: "tool", name: "return_email" },
     messages: [
       {
         role: "user",
@@ -84,25 +94,17 @@ Website: ${prospect.website || "Unknown"}
 Prior research summary: ${prospect.score_reason}
 Prior draft message (for inspiration only, rewrite as a proper cold email with subject): ${prospect.outreach_message}
 
-Bu bilgilerle bir cold email oluştur ve JSON formatında döndür.`,
+Bu bilgilerle bir cold email oluştur ve return_email tool'unu çağır.`,
       },
     ],
   });
 
-  const rawText = response.content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("")
-    .trim();
+  const toolUse = response.content.find(
+    (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
+  );
 
-  const cleaned = rawText
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-
-  const parsed = JSON.parse(cleaned);
-  return { subject: parsed.subject || "", body: parsed.body || "" };
+  const input = toolUse?.input as { subject?: string; body?: string } | undefined;
+  return { subject: input?.subject || "", body: input?.body || "" };
 }
 
 export async function sendOutreachEmail(params: {

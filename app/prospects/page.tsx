@@ -12,8 +12,11 @@ type Prospect = {
   industry: string | null;
   company_size: string | null;
   size_source: string | null;
+  company_email: string | null;
+  company_email_source: string | null;
   decision_maker_name: string | null;
   decision_maker_role: string | null;
+  decision_maker_email: string | null;
   prospect_score: number;
   score_reason: string;
   outreach_message: string;
@@ -285,6 +288,25 @@ export default function ProspectsPage() {
                 {p.decision_maker_role ? ` — ${p.decision_maker_role}` : ""}
               </div>
             )}
+
+            <div className="temperature">
+              Recipient Email:{" "}
+              {p.decision_maker_email || p.company_email || "Not found"}
+              {(p.decision_maker_email || p.company_email) && p.company_email_source && (
+                <>
+                  {" "}
+                  ·{" "}
+                  <a
+                    href={p.company_email_source}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    style={{ color: "inherit" }}
+                  >
+                    Email Source
+                  </a>
+                </>
+              )}
+            </div>
 
             {p.website && (
               <p className="subtitle" style={{ marginTop: 12 }}>

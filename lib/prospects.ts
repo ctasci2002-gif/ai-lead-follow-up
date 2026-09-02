@@ -56,6 +56,42 @@ export async function searchCompanies(
   }));
 }
 
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+const IGNORED_EMAIL_SUBSTRINGS = [
+  "noreply",
+  "no-reply",
+  "donotreply",
+  "example.com",
+  "example.org",
+  "sentry.io",
+  "wixpress.com",
+  "godaddy.com",
+  "yourdomain",
+];
+
+// Deterministic, non-AI extraction: scans a search result's actual fetched
+// text for a literal email address. Never invents one — if the pattern
+// isn't present in the given content, this returns null. Used as-is (not
+// passed through Claude) so there is zero fabrication risk for this field.
+export function extractEmail(content: string | null | undefined): string | null {
+  if (!content) return null;
+
+  const matches = content.match(EMAIL_REGEX);
+  if (!matches) return null;
+
+  for (const raw of matches) {
+    const email = raw.replace(/[.,;:]+$/, "");
+    const lower = email.toLowerCase();
+
+    if (IGNORED_EMAIL_SUBSTRINGS.some((s) => lower.includes(s))) continue;
+    if (/\.(png|jpg|jpeg|gif|svg|webp)$/i.test(lower)) continue;
+
+    return email;
+  }
+
+  return null;
+}
+
 export function parseSizeNumbers(text: string | null | undefined): number[] {
   if (!text) return [];
   const matches = text.match(/\d+/g);
@@ -171,46 +207,63 @@ Her kaynak için (mümkünse) bir şirket belirle ve şunları üret:
 
 Eğer bir kaynak gerçek bir şirket değilse (haber makalesi, dizin sayfası, alakasız içerik vb.) o kaynağı sonuçlara dahil etme.
 
-Çıktıyı SADECE aşağıdaki JSON dizisi formatında döndür, başka hiçbir açıklama ekleme:
-
-[
-  {
-    "company_name": "...",
-    "website": "...",
-    "location": "...",
-    "industry": "...",
-    "company_size": "Unknown",
-    "company_size_verified": false,
-    "size_source": null,
-    "decision_maker_name": null,
-    "decision_maker_role": null,
-    "prospect_score": 0,
-    "score_reason": "...",
-    "outreach_message": "...",
-    "source_urls": ["..."]
-  }
-]
+return_prospects tool'unu çağırarak sonucu döndür.
 `,
+    tools: [
+      {
+        name: "return_prospects",
+        description: "Analiz edilen prospect şirketlerin listesini döndürür.",
+        input_schema: {
+          type: "object",
+          properties: {
+            prospects: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  company_name: { type: "string" },
+                  website: { type: ["string", "null"] },
+                  location: { type: ["string", "null"] },
+                  industry: { type: ["string", "null"] },
+                  company_size: { type: "string" },
+                  company_size_verified: { type: "boolean" },
+                  size_source: { type: ["string", "null"] },
+                  decision_maker_name: { type: ["string", "null"] },
+                  decision_maker_role: { type: ["string", "null"] },
+                  prospect_score: { type: "integer" },
+                  score_reason: { type: "string" },
+                  outreach_message: { type: "string" },
+                  source_urls: { type: "array", items: { type: "string" } },
+                },
+                required: [
+                  "company_name",
+                  "company_size",
+                  "company_size_verified",
+                  "prospect_score",
+                  "score_reason",
+                  "outreach_message",
+                  "source_urls",
+                ],
+              },
+            },
+          },
+          required: ["prospects"],
+        },
+      },
+    ],
+    tool_choice: { type: "tool", name: "return_prospects" },
     messages: [
       {
         role: "user",
-        content: `${sourcesBlock}\n\nBu kaynakları analiz et ve JSON formatında sonuç döndür.`,
+        content: `${sourcesBlock}\n\nBu kaynakları analiz et ve return_prospects tool'unu çağır.`,
       },
     ],
   });
 
-  const rawText = response.content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text)
-    .join("")
-    .trim();
+  const toolUse = response.content.find(
+    (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
+  );
 
-  const cleaned = rawText
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-
-  const parsed = JSON.parse(cleaned);
-  return Array.isArray(parsed) ? parsed : [];
+  const parsed = (toolUse?.input as { prospects?: unknown })?.prospects;
+  return Array.isArray(parsed) ? (parsed as AnalyzedProspect[]) : [];
 }
