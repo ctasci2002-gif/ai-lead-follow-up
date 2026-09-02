@@ -224,8 +224,13 @@ export default function LandingPage() {
 
       <section className="lp-section lp-preview-section">
         <h2 className="lp-section-title">
-          Satış pipeline'ını tek bakışta gör.
+          Lead'lerinin durumunu tek bakışta gör.
         </h2>
+
+        <p className="lp-preview-subtitle">
+          Kim sıcak, kiminle bugün iletişime geçmelisin, hangi takipler
+          gecikti? Zappivot hepsini tek ekranda gösterir.
+        </p>
 
         <div className="lp-preview-mockup">
           <DashboardMockup large />
