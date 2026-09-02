@@ -21,3 +21,4 @@ create policy "Users manage own leads"
   with check (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.leads to authenticated;
+grant select on public.leads to service_role;
