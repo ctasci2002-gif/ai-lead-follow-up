@@ -4,11 +4,11 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,10 +58,10 @@ export default function LoginPage() {
           <div>
             <span className="badge">AI Lead Follow-Up · MVP</span>
             <h1 className="title" style={{ fontSize: 32 }}>
-              {mode === "signin" ? "Giriş yap" : "Hesap oluştur"}
+              {mode === "signup" ? "Ücretsiz başla" : "Giriş yap"}
             </h1>
             <p className="subtitle">
-              Lead dashboard'una erişmek için giriş yap.
+              Lead dashboard'una erişmek için hesap oluştur.
             </p>
           </div>
         </div>
@@ -94,9 +94,9 @@ export default function LoginPage() {
             <button className="btn" disabled={loading}>
               {loading
                 ? "İşleniyor..."
-                : mode === "signin"
-                ? "Giriş yap"
-                : "Hesap oluştur"}
+                : mode === "signup"
+                ? "Hesap oluştur"
+                : "Giriş yap"}
             </button>
           </form>
 
@@ -104,21 +104,7 @@ export default function LoginPage() {
           {info && <p className="subtitle">{info}</p>}
 
           <p className="subtitle" style={{ marginTop: 16 }}>
-            {mode === "signin" ? (
-              <>
-                Hesabın yok mu?{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMode("signup");
-                    setError("");
-                  }}
-                >
-                  Hesap oluştur
-                </a>
-              </>
-            ) : (
+            {mode === "signup" ? (
               <>
                 Zaten hesabın var mı?{" "}
                 <a
@@ -130,6 +116,20 @@ export default function LoginPage() {
                   }}
                 >
                   Giriş yap
+                </a>
+              </>
+            ) : (
+              <>
+                Hesabın yok mu?{" "}
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMode("signup");
+                    setError("");
+                  }}
+                >
+                  Hesap oluştur
                 </a>
               </>
             )}
