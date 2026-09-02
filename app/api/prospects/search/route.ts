@@ -4,6 +4,7 @@ import {
   dedupeByDomain,
   analyzeProspects,
   extractDomain,
+  parseSizeNumbers,
 } from "../../../../lib/prospects";
 
 const DAILY_LIMIT = 20;
@@ -141,12 +142,54 @@ export async function POST(req: Request) {
       return Response.json({ prospects: [] });
     }
 
-    const analyzedRaw = await analyzeProspects(candidates, {
+    const rawAnalyzed = await analyzeProspects(candidates, {
       location,
       industry,
       companySize,
     });
-    console.log("[prospects] analyzed by Claude:", analyzedRaw.length);
+    console.log("[prospects] analyzed by Claude:", rawAnalyzed.length);
+
+    // Trust nothing Claude says about size unless it points at a URL we
+    // actually gave it — a hallucinated/off-list source_source is treated
+    // exactly like no source at all.
+    const candidateUrls = new Set(candidates.map((c) => c.url));
+
+    const analyzedRaw = rawAnalyzed.map((p) => {
+      const sourceIsReal = !!p.size_source && candidateUrls.has(p.size_source);
+      const verified = !!p.company_size_verified && sourceIsReal;
+
+      return {
+        ...p,
+        company_size: verified && p.company_size ? p.company_size : "Unknown",
+        company_size_verified: verified,
+        size_source: verified ? p.size_source : null,
+      };
+    });
+
+    // Hard filter: if we VERIFIABLY know a company is bigger than the
+    // user's target max size, drop it entirely — never show it as if it
+    // might fit. Unverified sizes are never excluded on this basis (we
+    // can't prove they're out of range either), just labeled "Unknown".
+    const targetMaxSize = companySize
+      ? Math.max(...parseSizeNumbers(companySize), 0) || null
+      : null;
+
+    const sizeFiltered = analyzedRaw.filter((p) => {
+      if (!targetMaxSize || !p.company_size_verified) return true;
+      const nums = parseSizeNumbers(p.company_size);
+      const verifiedMin = nums.length ? Math.min(...nums) : null;
+      if (verifiedMin !== null && verifiedMin > targetMaxSize) {
+        console.log(
+          "[prospects] excluded (verified size over target):",
+          p.company_name,
+          p.company_size
+        );
+        return false;
+      }
+      return true;
+    });
+
+    console.log("[prospects] after size filter:", sizeFiltered.length);
 
     // Second dedupe pass on Claude's extracted company_name/website: a repeat
     // search can surface a different source URL for a company we already
@@ -154,7 +197,7 @@ export async function POST(req: Request) {
     // domain check above can't catch since it only sees the raw search hit.
     const seenInBatch = new Set<string>();
 
-    const analyzed = analyzedRaw.filter((p) => {
+    const analyzed = sizeFiltered.filter((p) => {
       const domain = p.website ? extractDomain(p.website) : null;
       const nameKey = (p.company_name || "").toLowerCase().trim();
 
@@ -181,6 +224,12 @@ export async function POST(req: Request) {
     const finalResults = analyzed.slice(0, maxResults);
     console.log("[prospects] final count after trimming to maxResults:", finalResults.length);
 
+    for (const p of finalResults) {
+      console.log(
+        `[prospects] Company: ${p.company_name} | Company Size: ${p.company_size} | Size Source: ${p.size_source || "Unverified"} | Score: ${p.prospect_score}`
+      );
+    }
+
     const rows = finalResults.map((p) => ({
       user_id: user.id,
       company_name: p.company_name,
@@ -188,6 +237,7 @@ export async function POST(req: Request) {
       location: p.location,
       industry: p.industry,
       company_size: p.company_size,
+      size_source: p.size_source,
       decision_maker_name: p.decision_maker_name,
       decision_maker_role: p.decision_maker_role,
       prospect_score: p.prospect_score,

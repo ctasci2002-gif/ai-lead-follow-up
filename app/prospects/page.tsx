@@ -11,6 +11,7 @@ type Prospect = {
   location: string | null;
   industry: string | null;
   company_size: string | null;
+  size_source: string | null;
   decision_maker_name: string | null;
   decision_maker_role: string | null;
   prospect_score: number;
@@ -249,17 +250,33 @@ export default function ProspectsPage() {
             <div className="result-header">
               <div>
                 <h2>{p.company_name}</h2>
-                <p>
-                  {[p.location, p.industry, p.company_size]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
+                <p>{[p.location, p.industry].filter(Boolean).join(" · ")}</p>
               </div>
 
               <div className="score">
                 <strong>{p.prospect_score}</strong>
                 <span>/100</span>
               </div>
+            </div>
+
+            <div className="temperature">
+              Company Size: {p.company_size || "Unknown"}
+              {p.size_source ? (
+                <>
+                  {" "}
+                  ·{" "}
+                  <a
+                    href={p.size_source}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    style={{ color: "inherit" }}
+                  >
+                    Size Source
+                  </a>
+                </>
+              ) : (
+                " (Unverified)"
+              )}
             </div>
 
             {p.decision_maker_name && (

@@ -43,3 +43,13 @@ Flow: [Tavily](https://tavily.com) search → dedupe by domain against the user'
 A server-side daily quota (20 prospects/user/day, counted from the `prospects` table) is enforced in `app/api/prospects/search/route.ts` before any search or Claude call is made, so it can't be bypassed from the client and doesn't burn API budget once exhausted.
 
 Run the `prospects` table SQL from `supabase/schema.sql` once in the Supabase SQL editor before using this feature.
+
+## AI Marketing Agent (Phase 1: core outreach loop)
+
+`/marketing` (protected) turns today's Prospect Finder results into approved, sent outreach. No new provider or env var — it reuses the same Resend and Anthropic keys already configured above.
+
+Flow: today's `prospects` are bucketed by their existing `prospect_score` (High ≥80 / Medium 60–79 / Low <60 — no extra Claude call, that scoring already happened in Prospect Finder). Clicking "Email Oluştur" makes **one** Claude call (`app/api/marketing/generate-email/route.ts`) that reformats the prospect's already-researched, already-verified facts into a `{subject, body}` cold email — it never re-searches and never invents a fact that wasn't already grounded. The user edits it and supplies a recipient email (never scraped or guessed — search results don't reliably contain a specific person's address, so a human confirms it), then "✓ Onayla ve Gönder" calls `app/api/marketing/send/route.ts`, which — server-side — validates the address, checks a per-user `suppression_list`, blocks a second send to the same prospect, enforces a 20/day send limit (counted from `outreach_messages`, independent of the client), sends via Resend, and only on actual delivery success saves/updates the corresponding `leads` row with `status = 'Mesaj Gönderildi'` and (optionally) `next_follow_up_at`.
+
+Run the `leads.status` / `outreach_messages` / `suppression_list` SQL from `supabase/schema.sql` once before using this feature.
+
+Deferred to a later phase (not built yet): named/saved campaigns with a funnel dashboard, AI Insights, an AI chat over your Zappivot data, and a formal tool-calling agent architecture — the spec that prompted this feature covered all of those, but they were scoped out of this pass to ship a solid, testable core loop first.

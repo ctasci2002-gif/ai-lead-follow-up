@@ -236,6 +236,10 @@ export default function Dashboard() {
             🔍 Prospect Finder
           </Link>
 
+          <Link href="/marketing" className="lp-link-btn">
+            🧠 AI Marketing
+          </Link>
+
           <button className="btn" type="button" onClick={signOut}>
             Çıkış yap
           </button>
