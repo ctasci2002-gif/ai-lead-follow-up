@@ -30,7 +30,12 @@ function buildDigestHtml(leads: DueLead[]) {
     .join("");
 
   return `
-    <div style="font-family:Arial,sans-serif;color:#0b1020;">
+    <!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+      </head>
+      <body style="font-family:Arial,sans-serif;color:#0b1020;">
       <h2>Bugün takip etmen gereken ${leads.length} lead var</h2>
       <table style="border-collapse:collapse;width:100%;">
         <thead>
@@ -43,7 +48,8 @@ function buildDigestHtml(leads: DueLead[]) {
         </thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>
+      </body>
+    </html>
   `;
 }
 
