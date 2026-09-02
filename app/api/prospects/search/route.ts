@@ -77,11 +77,12 @@ export async function POST(req: Request) {
 
     const maxResults = Math.min(requestedCount, remaining);
 
+    // Company size is intentionally NOT part of the search query — it's a
+    // narrow, rarely-indexed phrase ("5-30 employees") that starves the
+    // search engine of results. Claude gets it as scoring context instead
+    // (see analyzeProspects), applied after search, not before.
     const query =
-      freeText ||
-      [industry, "companies in", location, companySize && `(${companySize} employees)`]
-        .filter(Boolean)
-        .join(" ");
+      freeText || [industry, "companies in", location].filter(Boolean).join(" ");
 
     const [{ data: existingProspects }, { data: existingLeads }] =
       await Promise.all([
@@ -105,18 +106,47 @@ export async function POST(req: Request) {
       ].filter((n): n is string => !!n)
     );
 
-    const searchResults = await searchCompanies(query, maxResults);
+    // Oversample: directory/listicle pages get filtered out by Claude, and
+    // duplicate-domain hits get filtered out by dedupe, so asking for exactly
+    // `maxResults` raw hits often leaves too few (or zero) real companies
+    // after filtering. Ask Tavily for more than we need, then trim the final
+    // analyzed list back down to maxResults before inserting.
+    const searchCount = Math.min(maxResults * 3, 20);
+
+    console.log(
+      "[prospects] query:",
+      query,
+      "| requested maxResults:",
+      maxResults,
+      "| search fetch count:",
+      searchCount
+    );
+
+    const searchResults = await searchCompanies(query, searchCount);
+    console.log("[prospects] raw search result count:", searchResults.length);
+    console.log(
+      "[prospects] raw results:",
+      searchResults.map((r) => ({ title: r.title, url: r.url }))
+    );
+
     const candidates = dedupeByDomain(
       searchResults,
       excludeDomains,
       excludeCompanyNames
     );
+    console.log("[prospects] candidates after pre-dedupe:", candidates.length);
 
     if (candidates.length === 0) {
+      console.log("[prospects] stopped: 0 candidates after pre-dedupe");
       return Response.json({ prospects: [] });
     }
 
-    const analyzedRaw = await analyzeProspects(candidates);
+    const analyzedRaw = await analyzeProspects(candidates, {
+      location,
+      industry,
+      companySize,
+    });
+    console.log("[prospects] analyzed by Claude:", analyzedRaw.length);
 
     // Second dedupe pass on Claude's extracted company_name/website: a repeat
     // search can surface a different source URL for a company we already
@@ -138,11 +168,20 @@ export async function POST(req: Request) {
       return true;
     });
 
+    console.log("[prospects] after post-analysis dedupe:", analyzed.length);
+
     if (analyzed.length === 0) {
+      console.log("[prospects] stopped: 0 after post-analysis dedupe");
       return Response.json({ prospects: [] });
     }
 
-    const rows = analyzed.map((p) => ({
+    // Trim back down to what the user asked for (and what the daily quota
+    // allows) — oversampling above was only to give filtering enough room.
+    analyzed.sort((a, b) => b.prospect_score - a.prospect_score);
+    const finalResults = analyzed.slice(0, maxResults);
+    console.log("[prospects] final count after trimming to maxResults:", finalResults.length);
+
+    const rows = finalResults.map((p) => ({
       user_id: user.id,
       company_name: p.company_name,
       website: p.website,
