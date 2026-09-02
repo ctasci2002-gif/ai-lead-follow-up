@@ -276,6 +276,29 @@ button {
   color: #94a3b8;
 }
 
+.filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-tab {
+  border: 1px solid #334155;
+  background: #0b1220;
+  color: #cbd5e1;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.filter-tab.active {
+  background: #f8fafc;
+  color: #0b1020;
+  border-color: #f8fafc;
+  font-weight: 700;
+}
+
 @media (max-width: 700px) {
   .grid {
     grid-template-columns: 1fr;

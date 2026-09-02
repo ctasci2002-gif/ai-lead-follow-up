@@ -22,6 +22,8 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+type FollowUpFilter = "all" | "today" | "overdue" | "upcoming";
+
 export default function Home() {
   const router = useRouter();
   const supabase = createClient();
@@ -39,6 +41,7 @@ export default function Home() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
 
   useEffect(() => {
     async function load() {
@@ -163,6 +166,21 @@ export default function Home() {
     .sort((a, b) =>
       (a.next_follow_up_at as string).localeCompare(b.next_follow_up_at as string)
     );
+
+  const followUpFilters: { key: FollowUpFilter; label: string }[] = [
+    { key: "all", label: "Tümü" },
+    { key: "today", label: "Bugün" },
+    { key: "overdue", label: "Geciken" },
+    { key: "upcoming", label: "Gelecek" },
+  ];
+
+  const filteredLeads = leads.filter((lead) => {
+    if (followUpFilter === "all") return true;
+    if (!lead.next_follow_up_at) return false;
+    if (followUpFilter === "today") return lead.next_follow_up_at === today;
+    if (followUpFilter === "overdue") return lead.next_follow_up_at < today;
+    return lead.next_follow_up_at > today;
+  });
 
   return (
     <main className="page">
@@ -394,8 +412,31 @@ export default function Home() {
           <section className="card">
             <h2>Lead'ler</h2>
 
+            <div className="filter-tabs">
+              {followUpFilters.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  className={
+                    followUpFilter === f.key
+                      ? "filter-tab active"
+                      : "filter-tab"
+                  }
+                  onClick={() => setFollowUpFilter(f.key)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {filteredLeads.length === 0 && (
+              <p className="subtitle" style={{ padding: "16px 0" }}>
+                Bu filtrede lead yok.
+              </p>
+            )}
+
             <div className="lead-list">
-              {leads.map((lead) => (
+              {filteredLeads.map((lead) => (
                 <div
                   className="lead"
                   key={lead.id}
