@@ -9,6 +9,7 @@ create table leads (
   temperature text not null,
   reason text not null,
   message text not null,
+  next_follow_up_at date,
   created_at timestamptz not null default now()
 );
 

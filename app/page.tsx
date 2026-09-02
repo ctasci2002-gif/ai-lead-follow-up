@@ -14,8 +14,13 @@ type Lead = {
   temperature: string;
   reason: string;
   message: string;
+  next_follow_up_at: string | null;
   created_at: string;
 };
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export default function Home() {
   const router = useRouter();
@@ -132,6 +137,33 @@ export default function Home() {
     await supabase.from("leads").delete().eq("id", id);
   }
 
+  async function updateFollowUp(id: string, date: string) {
+    const value = date || null;
+
+    setLeads((prev) =>
+      prev.map((lead) =>
+        lead.id === id ? { ...lead, next_follow_up_at: value } : lead
+      )
+    );
+
+    setSelectedLead((prev) =>
+      prev && prev.id === id ? { ...prev, next_follow_up_at: value } : prev
+    );
+
+    await supabase
+      .from("leads")
+      .update({ next_follow_up_at: value })
+      .eq("id", id);
+  }
+
+  const today = todayStr();
+
+  const dueLeads = leads
+    .filter((lead) => lead.next_follow_up_at && lead.next_follow_up_at <= today)
+    .sort((a, b) =>
+      (a.next_follow_up_at as string).localeCompare(b.next_follow_up_at as string)
+    );
+
   return (
     <main className="page">
       <div className="container">
@@ -158,6 +190,11 @@ export default function Home() {
               </strong>
               <span>Sıcak Lead</span>
             </div>
+
+            <div className="stat">
+              <strong>{dueLeads.length}</strong>
+              <span>Bugün Takip</span>
+            </div>
           </div>
         </div>
 
@@ -180,6 +217,41 @@ export default function Home() {
             Çıkış yap
           </button>
         </div>
+
+        {dueLeads.length > 0 && (
+          <section className="card result-card">
+            <h2>📅 Bugün Takip Edilecek Lead'ler</h2>
+
+            <div className="lead-list">
+              {dueLeads.map((lead) => (
+                <div
+                  className="lead"
+                  key={lead.id}
+                  onClick={() => setSelectedLead(lead)}
+                >
+                  <div>
+                    <strong>{lead.name}</strong>
+                    <span>{lead.company}</span>
+                  </div>
+
+                  <div className="lead-right">
+                    <span
+                      className={
+                        lead.next_follow_up_at! < today
+                          ? "followup-badge overdue"
+                          : "followup-badge today"
+                      }
+                    >
+                      {lead.next_follow_up_at! < today
+                        ? `Gecikti · ${lead.next_follow_up_at}`
+                        : "Bugün"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="card">
           <h2>+ Yeni Lead</h2>
@@ -303,6 +375,18 @@ export default function Home() {
                 Mesajı Kopyala
               </button>
             </div>
+
+            <div className="field" style={{ marginTop: 20, marginBottom: 0 }}>
+              <label>Sonraki takip tarihi</label>
+
+              <input
+                type="date"
+                value={selectedLead.next_follow_up_at ?? ""}
+                onChange={(e) =>
+                  updateFollowUp(selectedLead.id, e.target.value)
+                }
+              />
+            </div>
           </section>
         )}
 
@@ -323,6 +407,20 @@ export default function Home() {
                   </div>
 
                   <div className="lead-right">
+                    {lead.next_follow_up_at && (
+                      <span
+                        className={
+                          lead.next_follow_up_at < today
+                            ? "followup-badge overdue"
+                            : lead.next_follow_up_at === today
+                            ? "followup-badge today"
+                            : "followup-badge upcoming"
+                        }
+                      >
+                        {lead.next_follow_up_at}
+                      </span>
+                    )}
+
                     <span>
                       {lead.temperature === "Sıcak"
                         ? "🔥"
