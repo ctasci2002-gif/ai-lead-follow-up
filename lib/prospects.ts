@@ -275,7 +275,20 @@ return_prospects tool'unu çağırarak sonucu döndür.
     console.log("[prospects] no tool_use block found, full content:", JSON.stringify(response.content).slice(0, 2000));
   }
 
-  const parsed = (toolUse?.input as { prospects?: unknown })?.prospects;
+  let parsed: unknown = (toolUse?.input as { prospects?: unknown })?.prospects;
+
+  // Defensive unwrap: occasionally the model stringifies the array (or even
+  // double-nests it as `{ prospects: "{\"prospects\":[...]}" }`) instead of
+  // returning it as a native array in the tool input. Observed live during
+  // testing — recover instead of silently dropping a valid analysis.
+  if (typeof parsed === "string") {
+    try {
+      const reparsed = JSON.parse(parsed);
+      parsed = Array.isArray(reparsed) ? reparsed : (reparsed as { prospects?: unknown })?.prospects;
+    } catch {
+      parsed = undefined;
+    }
+  }
 
   if (toolUse && !Array.isArray(parsed)) {
     console.log("[prospects] tool_use.input did not contain a prospects array:", JSON.stringify(toolUse.input).slice(0, 2000));

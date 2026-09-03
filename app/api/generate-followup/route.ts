@@ -1,7 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { createRouteClient } from "../../../lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
+    const supabase = await createRouteClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { name, company, need, notes } = await req.json();
 
     if (!name || !company || !need) {

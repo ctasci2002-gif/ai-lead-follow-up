@@ -33,16 +33,22 @@ export default function RegisterPage() {
         router.push("/dashboard");
         router.refresh();
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
 
         if (error) throw error;
 
-        setInfo("Hesap oluşturuldu. Giriş yapılıyor...");
-        router.push("/dashboard");
-        router.refresh();
+        if (data.session) {
+          setInfo("Hesap oluşturuldu. Giriş yapılıyor...");
+          router.push("/dashboard");
+          router.refresh();
+        } else {
+          setInfo(
+            "Hesap oluşturuldu. Giriş yapabilmek için e-postana gelen doğrulama linkine tıkla."
+          );
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu.");

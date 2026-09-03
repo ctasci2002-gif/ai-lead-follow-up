@@ -33,16 +33,26 @@ export default function LoginPage() {
         router.push("/dashboard");
         router.refresh();
       } else {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
 
         if (error) throw error;
 
-        setInfo("Hesap oluşturuldu. Giriş yapılıyor...");
-        router.push("/dashboard");
-        router.refresh();
+        if (data.session) {
+          setInfo("Hesap oluşturuldu. Giriş yapılıyor...");
+          router.push("/dashboard");
+          router.refresh();
+        } else {
+          // Supabase's "Confirm email" setting is on — signUp succeeds but
+          // returns no session. Navigating away here would just bounce the
+          // user straight back to /login via middleware before they ever
+          // see this message, so stay put and tell them to check email.
+          setInfo(
+            "Hesap oluşturuldu. Giriş yapabilmek için e-postana gelen doğrulama linkine tıkla."
+          );
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu.");
