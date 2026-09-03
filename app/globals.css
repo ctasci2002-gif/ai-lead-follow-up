@@ -439,6 +439,62 @@ button {
   background: #263244;
 }
 
+/* Dashboard */
+
+.dash-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #263244;
+}
+
+.dash-nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.dash-nav-account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dash-user-email {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.dash-primary-cta {
+  text-align: left;
+}
+
+.dash-primary-cta h2 {
+  margin: 0 0 8px;
+}
+
+.dash-primary-cta .subtitle {
+  margin-bottom: 18px;
+}
+
+.lead-right {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .dash-nav {
+    align-items: flex-start;
+  }
+
+  .lead-right {
+    gap: 10px;
+  }
+}
+
 /* Admin */
 
 .admin-table-wrap {
@@ -551,7 +607,7 @@ button {
 .lp-hero {
   max-width: 1240px;
   margin: auto;
-  padding: 56px 24px 64px;
+  padding: 48px 24px 44px;
   display: grid;
   grid-template-columns: 1.4fr 1fr;
   gap: 50px;
@@ -652,7 +708,7 @@ button {
 .lp-section {
   max-width: 1180px;
   margin: auto;
-  padding: 56px 24px;
+  padding: 44px 24px;
 }
 
 .lp-section-title {
@@ -1178,6 +1234,11 @@ button {
   display: flex;
   flex-direction: column;
   text-align: left;
+  padding: 34px 30px;
+}
+
+.lp-pricing-card h3 {
+  font-size: 22px;
 }
 
 .lp-pricing-tagline {
@@ -1187,7 +1248,7 @@ button {
 }
 
 .lp-pricing-price {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
   margin-bottom: 20px;
   color: #f8fafc;
@@ -1230,6 +1291,16 @@ button {
   border-color: var(--accent-strong);
 }
 
+.lp-pricing-cta-disabled {
+  color: #475569;
+  cursor: default;
+  pointer-events: none;
+}
+
+.lp-pricing-cta-disabled:hover {
+  border-color: #334155;
+}
+
 /* FAQ */
 
 .lp-faq-list {
@@ -1246,13 +1317,50 @@ button {
   border-bottom: 0;
 }
 
-.lp-faq-item h3 {
-  margin: 0 0 8px;
+.lp-faq-question {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: #f8fafc;
   font-size: 17px;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.lp-faq-item p {
-  margin: 0;
+.lp-faq-caret {
+  flex-shrink: 0;
+  color: #64748b;
+  font-size: 20px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.lp-faq-caret.open {
+  transform: rotate(180deg);
+  color: var(--accent-strong);
+}
+
+.lp-faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  opacity: 0;
+}
+
+.lp-faq-answer.open {
+  max-height: 300px;
+  opacity: 1;
+}
+
+.lp-faq-answer p {
+  margin: 12px 0 0;
   color: #94a3b8;
   font-size: 15px;
   line-height: 1.65;

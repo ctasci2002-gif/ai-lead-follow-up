@@ -1,22 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FaqAccordion } from "./FaqAccordion";
+
+const seoTitle = "Zappivot — AI Prospecting for Agencies";
+const seoDescription =
+  "Find qualified prospects, discover decision-makers, and generate personalized outreach with AI.";
 
 export const metadata: Metadata = {
-  title: "Zappivot — Find Your Next Best Client",
-  description:
-    "Zappivot helps agencies discover qualified prospects, find the right decision-makers, and turn research into personalized outreach — in minutes.",
+  title: seoTitle,
+  description: seoDescription,
   openGraph: {
-    title: "Zappivot — Find Your Next Best Client",
-    description:
-      "Zappivot helps agencies discover qualified prospects, find the right decision-makers, and turn research into personalized outreach — in minutes.",
+    title: seoTitle,
+    description: seoDescription,
     type: "website",
     siteName: "Zappivot",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Zappivot — Find Your Next Best Client",
-    description:
-      "Zappivot helps agencies discover qualified prospects, find the right decision-makers, and turn research into personalized outreach — in minutes.",
+    title: seoTitle,
+    description: seoDescription,
   },
 };
 
@@ -92,29 +94,23 @@ function DashboardMockup({ large = false }: { large?: boolean }) {
   return (
     <div className={large ? "lp-mockup lp-mockup-lg" : "lp-mockup"}>
       <div className="lp-mockup-header">
-        <span className="badge">Zappivot</span>
+        <span className="badge">Zappivot · Mockup</span>
         <strong>Prospect Finder</strong>
       </div>
 
       <div className="lp-mockup-stats">
         <div className="stat">
-          <strong>132</strong>
-          <span>Prospects Found</span>
+          <strong>20</strong>
+          <span>Prospects / day</span>
         </div>
         <div className="stat">
-          <strong>48</strong>
-          <span>Verified Contacts</span>
+          <strong>AI</strong>
+          <span>Qualification</span>
         </div>
         <div className="stat">
-          <strong>12</strong>
-          <span>Ready to Send</span>
+          <strong>1-click</strong>
+          <span>Personalized outreach</span>
         </div>
-        {large && (
-          <div className="stat">
-            <strong>91</strong>
-            <span>Top Score</span>
-          </div>
-        )}
       </div>
 
       <div className="lp-prospect-list">
@@ -212,11 +208,6 @@ const problems = [
     title: "Generic cold emails",
     text: "Templates that ignore what the prospect actually does, and it shows.",
   },
-  {
-    icon: icons.chart,
-    title: "Hours wasted switching tools",
-    text: "Search, spreadsheet, inbox, CRM — juggling four tools for one outreach.",
-  },
 ];
 
 const solutions = [
@@ -289,13 +280,16 @@ const whyZappivot = [
 const pricingPlans = [
   {
     name: "Free",
-    tagline: "For testing Zappivot",
+    tagline: "Explore Zappivot",
     price: "$0",
     features: [
-      "Limited prospect searches",
-      "Limited AI generations",
+      "20 prospects / day",
+      "AI prospect qualification",
       "Basic prospect data",
+      "Limited AI generations",
     ],
+    cta: "Start Free",
+    active: true,
   },
   {
     name: "Pro",
@@ -308,6 +302,8 @@ const pricingPlans = [
       "AI outreach generation",
       "Saved prospects",
     ],
+    cta: "Coming Soon",
+    active: false,
   },
   {
     name: "Agency",
@@ -320,6 +316,8 @@ const pricingPlans = [
       "Team workflows",
       "Priority support",
     ],
+    cta: "Coming Soon",
+    active: false,
   },
 ];
 
@@ -379,12 +377,14 @@ export default function LandingPage() {
         <div className="lp-hero-text">
           <span className="badge">AI Prospecting for Agencies</span>
 
-          <h1 className="lp-hero-title">Find Your Next Best Client.</h1>
+          <h1 className="lp-hero-title">
+            Find Qualified Prospects. Reach the Right People.
+          </h1>
 
           <p className="lp-hero-subtitle">
-            Zappivot helps agencies discover qualified prospects, find the
-            right decision-makers, and turn research into personalized
-            outreach — in minutes.
+            Zappivot helps agencies find qualified companies, discover
+            decision-makers, and generate personalized outreach — all in one
+            place.
           </p>
 
           <div className="lp-hero-actions">
@@ -528,9 +528,15 @@ export default function LandingPage() {
                 ))}
               </ul>
 
-              <Link href="/register" className="lp-link-btn lp-pricing-cta">
-                Get Started
-              </Link>
+              {plan.active ? (
+                <Link href="/register" className="lp-link-btn lp-pricing-cta">
+                  {plan.cta}
+                </Link>
+              ) : (
+                <span className="lp-link-btn lp-pricing-cta lp-pricing-cta-disabled">
+                  {plan.cta}
+                </span>
+              )}
             </div>
           ))}
         </div>
@@ -539,14 +545,7 @@ export default function LandingPage() {
       <section id="faq" className="lp-section lp-faq-section">
         <h2 className="lp-section-title">Frequently asked questions</h2>
 
-        <div className="lp-faq-list">
-          {faqs.map((f) => (
-            <div className="lp-faq-item" key={f.q}>
-              <h3>{f.q}</h3>
-              <p>{f.a}</p>
-            </div>
-          ))}
-        </div>
+        <FaqAccordion faqs={faqs} />
       </section>
 
       <section className="lp-cta">

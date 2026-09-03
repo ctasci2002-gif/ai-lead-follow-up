@@ -19,8 +19,28 @@ type Lead = {
   created_at: string;
 };
 
+type Prospect = {
+  id: string;
+  company_name: string;
+  location: string | null;
+  industry: string | null;
+  prospect_score: number;
+  decision_maker_name: string | null;
+  decision_maker_email: string | null;
+  company_email: string | null;
+  created_at: string;
+};
+
+type OutreachStatus = "sent" | "draft" | "none";
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function scoreTier(score: number) {
+  if (score >= 80) return "high";
+  if (score >= 60) return "medium";
+  return "low";
 }
 
 type FollowUpFilter = "all" | "today" | "overdue" | "upcoming";
@@ -30,9 +50,17 @@ export default function Dashboard() {
   const supabase = createClient();
 
   const [userEmail, setUserEmail] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const [leads, setLeads] = useState<Lead[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
+  const [recentProspects, setRecentProspects] = useState<Prospect[]>([]);
+  const [outreachStatus, setOutreachStatus] = useState<
+    Record<string, OutreachStatus>
+  >({});
+
+  const [showManualForm, setShowManualForm] = useState(false);
   const [form, setForm] = useState({
     name: "",
     company: "",
@@ -61,6 +89,10 @@ export default function Dashboard() {
 
       setUserEmail(user?.email ?? "");
 
+      fetch("/api/admin/check")
+        .then((res) => setIsAdmin(res.ok))
+        .catch(() => {});
+
       const { data } = await supabase
         .from("leads")
         .select("*")
@@ -70,24 +102,38 @@ export default function Dashboard() {
         setLeads(data as Lead[]);
       }
 
-      const { data: prospects } = await supabase
+      const { data: prospectsData } = await supabase
         .from("prospects")
-        .select("prospect_score, decision_maker_email, company_email");
+        .select(
+          "id, company_name, location, industry, prospect_score, decision_maker_name, decision_maker_email, company_email, created_at"
+        )
+        .order("created_at", { ascending: false });
 
-      const { data: messages } = await supabase
+      const allProspects = (prospectsData as Prospect[]) || [];
+      setRecentProspects(allProspects.slice(0, 8));
+
+      const { data: messagesData } = await supabase
         .from("outreach_messages")
-        .select("status");
+        .select("prospect_id, status");
+
+      const messages = messagesData || [];
+
+      const statusMap: Record<string, OutreachStatus> = {};
+      for (const m of messages) {
+        if (statusMap[m.prospect_id] !== "sent") {
+          statusMap[m.prospect_id] = m.status === "sent" ? "sent" : "draft";
+        }
+      }
+      setOutreachStatus(statusMap);
 
       setProspectStats({
-        prospectsFound: prospects?.length || 0,
-        qualified:
-          prospects?.filter((p) => p.prospect_score >= 60).length || 0,
-        contactsFound:
-          prospects?.filter((p) => p.decision_maker_email || p.company_email)
-            .length || 0,
-        emailsGenerated: messages?.length || 0,
-        emailsSent:
-          messages?.filter((m) => m.status === "sent").length || 0,
+        prospectsFound: allProspects.length,
+        qualified: allProspects.filter((p) => p.prospect_score >= 60).length,
+        contactsFound: allProspects.filter(
+          (p) => p.decision_maker_email || p.company_email
+        ).length,
+        emailsGenerated: messages.length,
+        emailsSent: messages.filter((m) => m.status === "sent").length,
       });
       setStatsLoading(false);
     }
@@ -192,21 +238,15 @@ export default function Dashboard() {
 
   const today = todayStr();
 
-  const dueLeads = leads
-    .filter((lead) => lead.next_follow_up_at && lead.next_follow_up_at <= today)
-    .sort((a, b) =>
-      (a.next_follow_up_at as string).localeCompare(b.next_follow_up_at as string)
-    );
-
   const followUpFilters: { key: FollowUpFilter; label: string }[] = [
-    { key: "all", label: "Tümü" },
-    { key: "today", label: "Bugün" },
-    { key: "overdue", label: "Geciken" },
-    { key: "upcoming", label: "Gelecek" },
+    { key: "all", label: "All" },
+    { key: "today", label: "Today" },
+    { key: "overdue", label: "Overdue" },
+    { key: "upcoming", label: "Upcoming" },
   ];
 
   const filteredLeads = leads.filter((lead) => {
-    if (followUpFilter === "all") return true;
+    if (followUpFilter === "all") return !!lead.next_follow_up_at;
     if (!lead.next_follow_up_at) return false;
     if (followUpFilter === "today") return lead.next_follow_up_at === today;
     if (followUpFilter === "overdue") return lead.next_follow_up_at < today;
@@ -216,220 +256,216 @@ export default function Dashboard() {
   return (
     <main className="page">
       <div className="container">
-
         <div className="topbar">
           <div>
-            <span className="badge">AI Lead Follow-Up · MVP</span>
-            <h1 className="title">Lead Dashboard</h1>
+            <span className="badge">Zappivot</span>
+            <h1 className="title">Dashboard</h1>
             <p className="subtitle">
-              Lead'lerini analiz et, önceliklendir ve kişiselleştirilmiş
-              follow-up mesajları oluştur.
+              Find qualified prospects, discover decision-makers, and turn
+              them into conversations.
             </p>
           </div>
+        </div>
 
-          <div className="stats">
-            <div className="stat">
-              <strong>{leads.length}</strong>
-              <span>Toplam Lead</span>
-            </div>
-
-            <div className="stat">
-              <strong>
-                {leads.filter((x) => x.temperature === "Sıcak").length}
-              </strong>
-              <span>Sıcak Lead</span>
-            </div>
-
-            <div className="stat">
-              <strong>{dueLeads.length}</strong>
-              <span>Bugün Takip</span>
-            </div>
+        <nav className="dash-nav">
+          <div className="dash-nav-links">
+            <Link href="/prospects" className="lp-link-btn">
+              Prospects
+            </Link>
+            <Link href="/marketing" className="lp-link-btn">
+              Marketing
+            </Link>
+            {isAdmin && (
+              <Link href="/admin" className="lp-link-btn">
+                Admin
+              </Link>
+            )}
           </div>
-        </div>
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 20,
-          }}
-        >
-          {userEmail && (
-            <span className="subtitle" style={{ margin: 0 }}>
-              {userEmail}
-            </span>
-          )}
-
-          <Link href="/prospects" className="lp-link-btn">
-            🔍 Prospect Finder
-          </Link>
-
-          <Link href="/marketing" className="lp-link-btn">
-            🧠 AI Marketing
-          </Link>
-
-          <Link href="/admin" className="lp-link-btn">
-            🛠️ Admin
-          </Link>
-
-          <button className="btn" type="button" onClick={signOut}>
-            Çıkış yap
-          </button>
-        </div>
+          <div className="dash-nav-account">
+            {userEmail && <span className="dash-user-email">{userEmail}</span>}
+            <button className="lp-link-btn" type="button" onClick={signOut}>
+              Sign out
+            </button>
+          </div>
+        </nav>
 
         <section className="card">
-          <h2>🔍 Prospecting</h2>
+          <h2>Overview</h2>
 
-          {!statsLoading && prospectStats.prospectsFound === 0 ? (
+          <div className="stats" style={{ flexWrap: "wrap" }}>
+            <div className="stat">
+              <strong>{statsLoading ? "—" : prospectStats.prospectsFound}</strong>
+              <span>Prospects Found</span>
+            </div>
+            <div className="stat">
+              <strong>{statsLoading ? "—" : prospectStats.qualified}</strong>
+              <span>Qualified</span>
+            </div>
+            <div className="stat">
+              <strong>{statsLoading ? "—" : prospectStats.contactsFound}</strong>
+              <span>Contacts Found</span>
+            </div>
+            <div className="stat">
+              <strong>{statsLoading ? "—" : prospectStats.emailsSent}</strong>
+              <span>Emails Sent</span>
+            </div>
+            <div className="stat">
+              <strong>{statsLoading ? "—" : prospectStats.emailsGenerated}</strong>
+              <span>Emails Generated</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="card dash-primary-cta">
+          <h2>Find your next best prospects.</h2>
+          <p className="subtitle">
+            Tell Zappivot who you&apos;re looking for and discover companies
+            that match your ideal customer profile.
+          </p>
+          <Link href="/prospects" className="btn lp-btn-lg">
+            Find Prospects
+          </Link>
+        </section>
+
+        <section className="card">
+          <h2>Recent Prospects</h2>
+
+          {recentProspects.length === 0 ? (
             <>
+              <p className="subtitle" style={{ marginBottom: 4 }}>
+                Your pipeline starts here.
+              </p>
               <p className="subtitle" style={{ marginBottom: 16 }}>
-                Henüz hiç prospect bulmadın.
+                Find your first qualified prospects with Zappivot.
               </p>
               <Link href="/prospects" className="btn" style={{ display: "inline-block" }}>
-                Find Your First Prospects
+                Find Prospects
               </Link>
             </>
           ) : (
-            <div className="stats" style={{ flexWrap: "wrap" }}>
-              <div className="stat">
-                <strong>{prospectStats.prospectsFound}</strong>
-                <span>Prospects Found</span>
-              </div>
-              <div className="stat">
-                <strong>{prospectStats.qualified}</strong>
-                <span>Qualified</span>
-              </div>
-              <div className="stat">
-                <strong>{prospectStats.contactsFound}</strong>
-                <span>Contacts Found</span>
-              </div>
-              <div className="stat">
-                <strong>{prospectStats.emailsGenerated}</strong>
-                <span>Emails Generated</span>
-              </div>
-              <div className="stat">
-                <strong>{prospectStats.emailsSent}</strong>
-                <span>Emails Sent</span>
-              </div>
+            <div className="lead-list">
+              {recentProspects.map((p) => {
+                const emailFound = !!(p.decision_maker_email || p.company_email);
+                const status = outreachStatus[p.id] || "none";
+
+                return (
+                  <div className="lead prospect-row" key={p.id}>
+                    <div>
+                      <strong>{p.company_name}</strong>
+                      <span>
+                        {[p.location, p.industry].filter(Boolean).join(" · ") ||
+                          "Location/industry unknown"}
+                      </span>
+                    </div>
+
+                    <div className="lead-right">
+                      <span className={`score-badge ${scoreTier(p.prospect_score)}`}>
+                        {p.prospect_score}
+                      </span>
+                      <span>{p.decision_maker_name || "No decision maker"}</span>
+                      <span>{emailFound ? "Email found" : "Email not found"}</span>
+                      <span
+                        className={
+                          status === "sent"
+                            ? "followup-badge"
+                            : status === "draft"
+                            ? "followup-badge today"
+                            : "followup-badge upcoming"
+                        }
+                      >
+                        {status === "sent"
+                          ? "Sent"
+                          : status === "draft"
+                          ? "Draft"
+                          : "Not contacted"}
+                      </span>
+                      <Link href="/prospects" className="lp-link-btn">
+                        View Prospect
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
 
-        {dueLeads.length > 0 && (
-          <section className="card result-card">
-            <h2>📅 Bugün Takip Edilecek Lead'ler</h2>
+        <section className="card">
+          <h2>Follow-ups</h2>
 
-            <div className="lead-list">
-              {dueLeads.map((lead) => (
-                <div
-                  className="lead"
-                  key={lead.id}
-                  onClick={() => setSelectedLead(lead)}
-                >
-                  <div>
-                    <strong>{lead.name}</strong>
-                    <span>{lead.company}</span>
-                  </div>
+          <div className="filter-tabs">
+            {followUpFilters.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                className={
+                  followUpFilter === f.key
+                    ? "filter-tab active"
+                    : "filter-tab"
+                }
+                onClick={() => setFollowUpFilter(f.key)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
 
-                  <div className="lead-right">
+          {filteredLeads.length === 0 && (
+            <p className="subtitle" style={{ padding: "16px 0" }}>
+              No follow-ups in this filter.
+            </p>
+          )}
+
+          <div className="lead-list">
+            {filteredLeads.map((lead) => (
+              <div
+                className="lead"
+                key={lead.id}
+                onClick={() => setSelectedLead(lead)}
+              >
+                <div>
+                  <strong>{lead.name}</strong>
+                  <span>{lead.company}</span>
+                </div>
+
+                <div className="lead-right">
+                  {lead.next_follow_up_at && (
                     <span
                       className={
-                        lead.next_follow_up_at! < today
+                        lead.next_follow_up_at < today
                           ? "followup-badge overdue"
-                          : "followup-badge today"
+                          : lead.next_follow_up_at === today
+                          ? "followup-badge today"
+                          : "followup-badge upcoming"
                       }
                     >
-                      {lead.next_follow_up_at! < today
-                        ? `Gecikti · ${lead.next_follow_up_at}`
-                        : "Bugün"}
+                      {lead.next_follow_up_at}
                     </span>
-                  </div>
+                  )}
+
+                  <span>
+                    {lead.temperature === "Sıcak"
+                      ? "🔥"
+                      : lead.temperature === "Ilık"
+                      ? "🟡"
+                      : "🔵"}{" "}
+                    {lead.score}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteLead(lead.id);
+                    }}
+                  >
+                    Sil
+                  </button>
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="card">
-          <h2>+ Yeni Lead</h2>
-
-          <form onSubmit={generate}>
-            <div className="grid">
-
-              <div className="field">
-                <label>Lead adı</label>
-
-                <input
-                  required
-                  placeholder="Ahmet Yılmaz"
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      name: e.target.value,
-                    })
-                  }
-                />
               </div>
-
-              <div className="field">
-                <label>Şirket</label>
-
-                <input
-                  required
-                  placeholder="ABC İnşaat"
-                  value={form.company}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      company: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="field full">
-                <label>İhtiyaç / konuşma özeti</label>
-
-                <textarea
-                  required
-                  placeholder="Web sitesi yenilemek istiyor..."
-                  value={form.need}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      need: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="field full">
-                <label>Ek notlar</label>
-
-                <textarea
-                  placeholder="Bütçe, zamanlama, karar verici vb."
-                  value={form.notes}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      notes: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-
-            <button className="btn" disabled={loading}>
-              {loading
-                ? "Claude lead'i analiz ediyor..."
-                : "Lead'i analiz et"}
-            </button>
-          </form>
-
-          {error && <p className="error">{error}</p>}
+            ))}
+          </div>
         </section>
 
         {selectedLead && (
@@ -489,85 +525,90 @@ export default function Dashboard() {
           </section>
         )}
 
-        {leads.length > 0 && (
-          <section className="card">
-            <h2>Lead'ler</h2>
+        <section className="card">
+          <button
+            type="button"
+            className="lp-link-btn"
+            onClick={() => setShowManualForm((s) => !s)}
+          >
+            {showManualForm ? "− Hide" : "+ Add Prospect Manually"}
+          </button>
 
-            <div className="filter-tabs">
-              {followUpFilters.map((f) => (
-                <button
-                  key={f.key}
-                  type="button"
-                  className={
-                    followUpFilter === f.key
-                      ? "filter-tab active"
-                      : "filter-tab"
-                  }
-                  onClick={() => setFollowUpFilter(f.key)}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+          {showManualForm && (
+            <form onSubmit={generate} style={{ marginTop: 20 }}>
+              <div className="grid">
+                <div className="field">
+                  <label>Lead adı</label>
 
-            {filteredLeads.length === 0 && (
-              <p className="subtitle" style={{ padding: "16px 0" }}>
-                Bu filtrede lead yok.
-              </p>
-            )}
-
-            <div className="lead-list">
-              {filteredLeads.map((lead) => (
-                <div
-                  className="lead"
-                  key={lead.id}
-                  onClick={() => setSelectedLead(lead)}
-                >
-                  <div>
-                    <strong>{lead.name}</strong>
-                    <span>{lead.company}</span>
-                  </div>
-
-                  <div className="lead-right">
-                    {lead.next_follow_up_at && (
-                      <span
-                        className={
-                          lead.next_follow_up_at < today
-                            ? "followup-badge overdue"
-                            : lead.next_follow_up_at === today
-                            ? "followup-badge today"
-                            : "followup-badge upcoming"
-                        }
-                      >
-                        {lead.next_follow_up_at}
-                      </span>
-                    )}
-
-                    <span>
-                      {lead.temperature === "Sıcak"
-                        ? "🔥"
-                        : lead.temperature === "Ilık"
-                        ? "🟡"
-                        : "🔵"}{" "}
-                      {lead.score}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteLead(lead.id);
-                      }}
-                    >
-                      Sil
-                    </button>
-                  </div>
+                  <input
+                    required
+                    placeholder="Ahmet Yılmaz"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        name: e.target.value,
+                      })
+                    }
+                  />
                 </div>
-              ))}
-            </div>
-          </section>
-        )}
 
+                <div className="field">
+                  <label>Şirket</label>
+
+                  <input
+                    required
+                    placeholder="ABC İnşaat"
+                    value={form.company}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        company: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="field full">
+                  <label>İhtiyaç / konuşma özeti</label>
+
+                  <textarea
+                    required
+                    placeholder="Web sitesi yenilemek istiyor..."
+                    value={form.need}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        need: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="field full">
+                  <label>Ek notlar</label>
+
+                  <textarea
+                    placeholder="Bütçe, zamanlama, karar verici vb."
+                    value={form.notes}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        notes: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <button className="btn" disabled={loading}>
+                {loading ? "Analyzing prospect..." : "Analyze Prospect"}
+              </button>
+            </form>
+          )}
+
+          {error && <p className="error">{error}</p>}
+        </section>
       </div>
     </main>
   );
