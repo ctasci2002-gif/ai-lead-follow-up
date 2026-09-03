@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "../../lib/supabase/client";
+import { createClient } from "../../../lib/supabase/client";
+import { qualificationChips } from "../../../lib/qualification";
+import { useDictionary } from "../../../lib/i18n/DictionaryProvider";
+import { LocaleSwitcher } from "../../../lib/i18n/LocaleSwitcher";
 
 type Prospect = {
   id: string;
@@ -42,6 +46,9 @@ function todayStartIso() {
 
 export default function MarketingPage() {
   const supabase = createClient();
+  const { locale } = useParams<{ locale: string }>();
+  const dict = useDictionary();
+  const t = dict.marketing;
 
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [drafts, setDrafts] = useState<Record<string, OutreachMessage>>({});
@@ -51,10 +58,26 @@ export default function MarketingPage() {
   const [followUpSetId, setFollowUpSetId] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sendQuota, setSendQuota] = useState<{ used: number; limit: number } | null>(
+    null
+  );
 
   useEffect(() => {
     load();
+    refreshQuota();
   }, []);
+
+  async function refreshQuota() {
+    try {
+      const res = await fetch("/api/marketing/send");
+      if (res.ok) {
+        const data = await res.json();
+        setSendQuota({ used: data.used, limit: data.limit });
+      }
+    } catch {
+      // quota display is best-effort; the server still enforces the real limit
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -110,11 +133,11 @@ export default function MarketingPage() {
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || "Bir hata oluştu.");
+      if (!res.ok) throw new Error(data.error || t.genericError);
 
       setDrafts((prev) => ({ ...prev, [prospectId]: data.outreachMessage }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+      setError(err instanceof Error ? err.message : t.genericError);
     } finally {
       setGeneratingId(null);
     }
@@ -143,11 +166,12 @@ export default function MarketingPage() {
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data.error || "Bir hata oluştu.");
+      if (!res.ok) throw new Error(data.error || t.genericError);
 
       setDrafts((prev) => ({ ...prev, [prospectId]: data.outreachMessage }));
+      refreshQuota();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+      setError(err instanceof Error ? err.message : t.genericError);
     } finally {
       setSendingId(null);
     }
@@ -220,29 +244,40 @@ export default function MarketingPage() {
           </div>
         </div>
 
+        <div className="qual-chips">
+          {qualificationChips(p).map((c) => (
+            <span
+              key={c.label}
+              className={
+                c.ok === true ? "qual-chip ok" : c.ok === false ? "qual-chip bad" : "qual-chip neutral"
+              }
+            >
+              {c.label}
+            </span>
+          ))}
+        </div>
+
         <div className="temperature">
-          Company Size: {p.company_size || "Unknown"}
-          {p.size_source ? (
+          {t.companySize}: {p.company_size || "Unknown"}
+          {p.size_source && (
             <>
               {" "}
               ·{" "}
               <a href={p.size_source} target="_blank" rel="noopener noreferrer nofollow" style={{ color: "inherit" }}>
-                Size Source
+                {t.sizeSource}
               </a>
             </>
-          ) : (
-            " (Unverified)"
           )}
         </div>
 
         <div className="temperature" style={{ marginTop: 8 }}>
           {p.decision_maker_name
-            ? `Decision Maker: ${p.decision_maker_name}${p.decision_maker_role ? ` — ${p.decision_maker_role}` : ""}`
-            : "Decision maker not found"}
+            ? `${t.decisionMakerFound}: ${p.decision_maker_name}${p.decision_maker_role ? ` — ${p.decision_maker_role}` : ""}`
+            : t.decisionMakerNotFound}
         </div>
 
         <div className="temperature" style={{ marginTop: 8 }}>
-          Recipient: {p.decision_maker_email || p.company_email || "Not found"}
+          {t.recipient}: {p.decision_maker_email || p.company_email || t.notFound}
           {(p.decision_maker_email || p.company_email) && p.company_email_source && (
             <>
               {" "}
@@ -253,7 +288,7 @@ export default function MarketingPage() {
                 rel="noopener noreferrer nofollow"
                 style={{ color: "inherit" }}
               >
-                Source
+                {t.source}
               </a>
             </>
           )}
@@ -261,8 +296,7 @@ export default function MarketingPage() {
 
         {!p.decision_maker_email && !p.company_email && (
           <p className="error" style={{ fontSize: 13 }}>
-            Verified email bulunamadı. Bu prospect için email gönderimi
-            devre dışı (alıcı adresini elle girmedikçe).
+            {t.noVerifiedEmail}
           </p>
         )}
 
@@ -287,14 +321,14 @@ export default function MarketingPage() {
             disabled={generatingId === p.id}
             onClick={() => generateEmail(p.id)}
           >
-            {generatingId === p.id ? "Email hazırlanıyor..." : "Email Oluştur"}
+            {generatingId === p.id ? t.generatingEmail : t.generateEmail}
           </button>
         )}
 
         {draft && !isSent && (
           <div className="message-box" style={{ marginTop: 16 }}>
             <div className="field">
-              <label>Subject</label>
+              <label>{t.fieldSubject}</label>
               <input
                 value={draft.subject}
                 onChange={(e) =>
@@ -307,7 +341,7 @@ export default function MarketingPage() {
             </div>
 
             <div className="field">
-              <label>Body</label>
+              <label>{t.fieldBody}</label>
               <textarea
                 style={{ minHeight: 160 }}
                 value={draft.body}
@@ -321,10 +355,10 @@ export default function MarketingPage() {
             </div>
 
             <div className="field">
-              <label>Alıcı e-posta</label>
+              <label>{t.fieldRecipient}</label>
               <input
                 type="email"
-                placeholder="james@brightpixel.co.uk"
+                placeholder={t.recipientPlaceholder}
                 value={recipients[p.id] || ""}
                 onChange={(e) =>
                   setRecipients((prev) => ({ ...prev, [p.id]: e.target.value }))
@@ -334,7 +368,7 @@ export default function MarketingPage() {
 
             {p.source_urls && p.source_urls.length > 0 && (
               <p className="subtitle" style={{ fontSize: 12 }}>
-                Research Sources:{" "}
+                {t.researchSources}:{" "}
                 {p.source_urls.map((u, i) => (
                   <span key={u}>
                     <a href={u} target="_blank" rel="noopener noreferrer nofollow">
@@ -353,11 +387,11 @@ export default function MarketingPage() {
                 disabled={sendingId === p.id || !recipients[p.id]}
                 onClick={() => sendEmail(p.id)}
               >
-                {sendingId === p.id ? "Gönderiliyor..." : "✓ Onayla ve Gönder"}
+                {sendingId === p.id ? t.sending : t.approveAndSend}
               </button>
 
               <button className="btn" type="button" onClick={() => suppress(p.id)}>
-                🚫 İletişime Geçme
+                {t.suppress}
               </button>
             </div>
           </div>
@@ -365,13 +399,13 @@ export default function MarketingPage() {
 
         {isSent && (
           <div className="message-box" style={{ marginTop: 16 }}>
-            <strong>✅ Gönderildi</strong>
+            <strong>{t.sentBadge}</strong>
             <p style={{ marginTop: 8 }}>{draft.recipient_email}</p>
 
             {!followUpSetId[p.id] ? (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
                 <span className="subtitle" style={{ margin: 0, alignSelf: "center" }}>
-                  Sonraki takip:
+                  {t.followUpLabel}
                 </span>
                 {[3, 5, 7].map((days) => (
                   <button
@@ -380,13 +414,13 @@ export default function MarketingPage() {
                     type="button"
                     onClick={() => setFollowUp(p.id, days)}
                   >
-                    {days} gün sonra
+                    {days} {t.followUpDays}
                   </button>
                 ))}
               </div>
             ) : (
               <p className="subtitle" style={{ marginTop: 8 }}>
-                Takip tarihi ayarlandı — Dashboard'dan görebilirsin.
+                {t.followUpSet}
               </p>
             )}
           </div>
@@ -400,30 +434,27 @@ export default function MarketingPage() {
       <div className="container">
         <div className="topbar">
           <div>
-            <span className="badge">🧠 AI Marketing Agent</span>
-            <h1 className="title">Bugünün outreach'ini yönet.</h1>
-            <p className="subtitle">
-              Yeni müşterileri bul, kişiselleştirilmiş outreach hazırla ve
-              satış takibini AI ile yönet.
-            </p>
+            <span className="badge">{t.badge}</span>
+            <h1 className="title">{t.title}</h1>
+            <p className="subtitle">{t.subtitle}</p>
           </div>
 
           <div className="stats">
             <div className="stat">
               <strong>{prospects.length}</strong>
-              <span>Prospect</span>
+              <span>{t.statProspect}</span>
             </div>
             <div className="stat">
               <strong>{qualified.length}</strong>
-              <span>Uygun</span>
+              <span>{t.statQualified}</span>
             </div>
             <div className="stat">
               <strong>{ready}</strong>
-              <span>Outreach Hazır</span>
+              <span>{t.statReady}</span>
             </div>
             <div className="stat">
               <strong>{sent}</strong>
-              <span>Gönderildi</span>
+              <span>{t.statSent}</span>
             </div>
           </div>
         </div>
@@ -431,13 +462,25 @@ export default function MarketingPage() {
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: 20,
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
-          <Link href="/dashboard" className="lp-link-btn">
-            ← Dashboard'a dön
-          </Link>
+          {sendQuota && (
+            <span className="subtitle" style={{ margin: 0 }}>
+              {sendQuota.used} / {sendQuota.limit} {t.quotaLabel}
+            </span>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <LocaleSwitcher />
+            <Link href={`/${locale}/dashboard`} className="lp-link-btn">
+              {t.backToDashboard}
+            </Link>
+          </div>
         </div>
 
         {error && (
@@ -450,20 +493,20 @@ export default function MarketingPage() {
 
         {!loading && prospects.length === 0 && (
           <section className="card">
-            <h2>Bugün henüz prospect yok</h2>
+            <h2>{t.emptyTitle}</h2>
             <p className="subtitle">
-              Önce{" "}
-              <Link href="/prospects" className="lp-link-btn">
-                Prospect Finder
-              </Link>{" "}
-              ile bugün için yeni prospect bul.
+              {t.emptyText}{" "}
+              <Link href={`/${locale}/prospects`} className="lp-link-btn">
+                {t.emptyLinkText}
+              </Link>
+              .
             </p>
           </section>
         )}
 
         {high.length > 0 && (
           <>
-            <h2>🔥 High Priority</h2>
+            <h2>{t.priorityHigh}</h2>
             {high.map((p) => (
               <ProspectCard p={p} key={p.id} />
             ))}
@@ -472,7 +515,7 @@ export default function MarketingPage() {
 
         {medium.length > 0 && (
           <>
-            <h2>🟡 Medium Priority</h2>
+            <h2>{t.priorityMedium}</h2>
             {medium.map((p) => (
               <ProspectCard p={p} key={p.id} />
             ))}
@@ -481,7 +524,7 @@ export default function MarketingPage() {
 
         {low.length > 0 && (
           <>
-            <h2>🔵 Low Priority</h2>
+            <h2>{t.priorityLow}</h2>
             {low.map((p) => (
               <ProspectCard p={p} key={p.id} />
             ))}

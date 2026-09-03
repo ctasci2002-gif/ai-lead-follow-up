@@ -13,7 +13,16 @@ export async function POST(req: Request) {
       return Response.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { name, company, need, notes } = await req.json();
+    const body = await req.json();
+
+    function clamp(value: unknown, maxLen: number) {
+      return typeof value === "string" ? value.trim().slice(0, maxLen) : "";
+    }
+
+    const name = clamp(body.name, 120);
+    const company = clamp(body.company, 160);
+    const need = clamp(body.need, 1000);
+    const notes = clamp(body.notes, 1000);
 
     if (!name || !company || !need) {
       return Response.json(

@@ -59,9 +59,9 @@ KURALLAR:
 - Karar verici adı verilmemişse "Hi there," gibi nötr bir hitap kullan, isim
   uydurma.
 - "AI-powered revolutionary platform" gibi pazarlama klişeleri kullanma.
-- Kısa tut (60-90 kelime, hitap ve imza hariç).
+- 100-150 kelime arasında tut (hitap ve imza hariç).
 - Spam gibi görünmesin, gerçek bir insan yazmış gibi doğal olsun.
-- Sonunda kısa bir call-to-action olsun (örn. kısa bir görüşme teklifi).
+- Sonunda TEK bir net call-to-action olsun (örn. kısa bir görüşme teklifi) — birden fazla istek/soru sıkıştırma.
 - İmza olarak "Best,\\n${senderEmail}" kullan.
 
 return_email tool'unu çağırarak sonucu döndür.
@@ -111,6 +111,7 @@ export async function sendOutreachEmail(params: {
   to: string;
   subject: string;
   body: string;
+  replyTo?: string;
 }) {
   const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -133,5 +134,6 @@ export async function sendOutreachEmail(params: {
     to: params.to,
     subject: params.subject,
     html,
+    ...(params.replyTo ? { replyTo: params.replyTo } : {}),
   });
 }

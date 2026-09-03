@@ -16,6 +16,34 @@ function todayStartIso() {
   return d.toISOString();
 }
 
+export async function GET() {
+  try {
+    const supabase = await createRouteClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { count: sentToday, error: countError } = await supabase
+      .from("outreach_messages")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "sent")
+      .gte("sent_at", todayStartIso());
+
+    if (countError) throw countError;
+
+    return Response.json({ used: sentToday || 0, limit: DAILY_SEND_LIMIT });
+  } catch (error) {
+    console.error(error);
+    return Response.json({ error: "Kota bilgisi alınamadı." }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createRouteClient();
@@ -118,6 +146,7 @@ export async function POST(req: Request) {
       to: recipientEmail,
       subject,
       body: emailBody,
+      replyTo: user.email || undefined,
     });
 
     if (sendError) {
