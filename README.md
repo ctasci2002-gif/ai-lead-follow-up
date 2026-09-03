@@ -17,6 +17,8 @@ Set these in `.env.local` (never commit this file):
 | `CRON_SECRET` | Shared secret that protects `/api/send-daily-reminders` from being triggered by anyone else | any random string |
 | `TAVILY_API_KEY` | Web search for AI Prospect Finder ([tavily.com](https://tavily.com)) | server-only |
 
+On Vercel, every variable above is set for both the **Production** and **Preview** environments — without the Preview copies, any PR-triggered preview deployment fails at build time on the dashboard page's `createClient()` call (Supabase throws if its URL/key are missing), even though the same code builds fine locally with `.env.local` present.
+
 ## Daily follow-up reminder emails
 
 `POST /api/send-daily-reminders` finds every lead across all users whose `next_follow_up_at` is today or earlier, groups them by user, and emails each user a digest of only their own due leads (looked up via Supabase Admin, independent of RLS — isolation is enforced in application code by grouping on `user_id` before sending).
