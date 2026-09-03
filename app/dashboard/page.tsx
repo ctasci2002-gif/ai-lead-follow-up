@@ -240,6 +240,10 @@ export default function Dashboard() {
             🧠 AI Marketing
           </Link>
 
+          <Link href="/admin" className="lp-link-btn">
+            🛠️ Admin
+          </Link>
+
           <button className="btn" type="button" onClick={signOut}>
             Çıkış yap
           </button>

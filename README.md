@@ -16,6 +16,7 @@ Set these in `.env.local` (never commit this file):
 | `EMAIL_FROM` | Sender address | set to `Zappivot <hello@contact.zappivot.com>` — `contact.zappivot.com` is a verified sending subdomain in Resend (DKIM/SPF/DMARC configured at the DNS provider), so this is not limited to Resend's sandbox restrictions. Defaults to `onboarding@resend.dev` if unset. |
 | `CRON_SECRET` | Shared secret that protects `/api/send-daily-reminders` from being triggered by anyone else | any random string |
 | `TAVILY_API_KEY` | Web search for AI Prospect Finder ([tavily.com](https://tavily.com)) | server-only |
+| `ADMIN_EMAILS` | Comma-separated list of emails allowed to view `/admin` | server-only, e.g. `owner@example.com,teammate@example.com` |
 
 On Vercel, every variable above is set for both the **Production** and **Preview** environments — without the Preview copies, any PR-triggered preview deployment fails at build time on the dashboard page's `createClient()` call (Supabase throws if its URL/key are missing), even though the same code builds fine locally with `.env.local` present.
 
@@ -55,3 +56,7 @@ Flow: today's `prospects` are bucketed by their existing `prospect_score` (High 
 Run the `leads.status` / `outreach_messages` / `suppression_list` SQL from `supabase/schema.sql` once before using this feature.
 
 Deferred to a later phase (not built yet): named/saved campaigns with a funnel dashboard, AI Insights, an AI chat over your Zappivot data, and a formal tool-calling agent architecture — the spec that prompted this feature covered all of those, but they were scoped out of this pass to ship a solid, testable core loop first.
+
+## Admin panel
+
+`/admin` (protected, restricted to `ADMIN_EMAILS`) lists every account that has signed up, reading directly from Supabase Auth (`auth.users`) via the service-role client — email, signup date, last sign-in, and email-confirmation status. Anyone who isn't in `ADMIN_EMAILS` gets a 403 from `/api/admin/users` even if they're signed in and reach the page.
