@@ -52,6 +52,7 @@ create policy "Users manage own prospects"
   with check (auth.uid() = user_id);
 
 grant select, insert, update, delete on public.prospects to authenticated;
+grant select, insert on public.prospects to service_role;
 
 alter table leads add column status text not null default 'Yeni';
 
