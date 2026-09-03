@@ -365,6 +365,37 @@ button {
   }
 }
 
+/* Legal pages */
+
+.legal-content h2 {
+  font-size: 18px;
+  margin: 28px 0 10px;
+}
+
+.legal-content h2:first-child {
+  margin-top: 0;
+}
+
+.legal-content p,
+.legal-content li {
+  color: #cbd5e1;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.legal-content ul {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+
+.legal-content li {
+  margin-bottom: 8px;
+}
+
+.legal-content a {
+  color: #f8fafc;
+}
+
 /* Auth */
 
 .btn-google {
@@ -750,6 +781,19 @@ button {
 .lp-footer p {
   margin: 0;
   font-size: 13px;
+}
+
+.lp-footer-links {
+  margin-top: 12px !important;
+}
+
+.lp-footer-links a {
+  color: #94a3b8;
+  text-decoration: none;
+}
+
+.lp-footer-links a:hover {
+  color: #f8fafc;
 }
 
 @media (max-width: 900px) {

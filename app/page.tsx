@@ -564,6 +564,11 @@ export default function LandingPage() {
       <footer className="lp-footer">
         <span className="lp-brand">Zappivot</span>
         <p>AI-powered prospecting and outreach for agencies.</p>
+        <p className="lp-footer-links">
+          <Link href="/privacy">Privacy Policy</Link>
+          <span> · </span>
+          <Link href="/terms">Terms of Service</Link>
+        </p>
       </footer>
     </main>
   );
