@@ -1,9 +1,11 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "../../lib/supabase/client";
+import { createClient } from "../../../lib/supabase/client";
+import { useDictionary } from "../../../lib/i18n/DictionaryProvider";
+import { LocaleSwitcher } from "../../../lib/i18n/LocaleSwitcher";
 
 type Lead = {
   id: string;
@@ -48,6 +50,9 @@ type FollowUpFilter = "all" | "today" | "overdue" | "upcoming";
 export default function Dashboard() {
   const router = useRouter();
   const supabase = createClient();
+  const { locale } = useParams<{ locale: string }>();
+  const dict = useDictionary();
+  const t = dict.dashboard;
 
   const [userEmail, setUserEmail] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
@@ -143,7 +148,7 @@ export default function Dashboard() {
 
   async function signOut() {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push(`/${locale}/login`);
     router.refresh();
   }
 
@@ -165,7 +170,7 @@ export default function Dashboard() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Bir hata oluştu.");
+        throw new Error(data.error || t.genericError);
       }
 
       const { data: inserted, error: insertError } = await supabase
@@ -198,9 +203,7 @@ export default function Dashboard() {
         notes: "",
       });
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Bir hata oluştu."
-      );
+      setError(err instanceof Error ? err.message : t.genericError);
     } finally {
       setLoading(false);
     }
@@ -239,10 +242,10 @@ export default function Dashboard() {
   const today = todayStr();
 
   const followUpFilters: { key: FollowUpFilter; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "today", label: "Today" },
-    { key: "overdue", label: "Overdue" },
-    { key: "upcoming", label: "Upcoming" },
+    { key: "all", label: t.filterAll },
+    { key: "today", label: t.filterToday },
+    { key: "overdue", label: t.filterOverdue },
+    { key: "upcoming", label: t.filterUpcoming },
   ];
 
   const filteredLeads = leads.filter((lead) => {
@@ -258,89 +261,88 @@ export default function Dashboard() {
       <div className="container">
         <div className="topbar">
           <div>
-            <span className="badge">Zappivot</span>
-            <h1 className="title">Dashboard</h1>
-            <p className="subtitle">
-              Find qualified prospects, discover decision-makers, and turn
-              them into conversations.
-            </p>
+            <span className="badge">{t.badge}</span>
+            <h1 className="title">{t.title}</h1>
+            <p className="subtitle">{t.subtitle}</p>
           </div>
         </div>
 
         <nav className="dash-nav">
           <div className="dash-nav-links">
-            <Link href="/prospects" className="lp-link-btn">
-              Prospects
+            <Link href={`/${locale}/prospects`} className="lp-link-btn">
+              {dict.nav.prospects}
             </Link>
-            <Link href="/marketing" className="lp-link-btn">
-              Marketing
+            <Link href={`/${locale}/marketing`} className="lp-link-btn">
+              {dict.nav.marketing}
             </Link>
             {isAdmin && (
-              <Link href="/admin" className="lp-link-btn">
-                Admin
+              <Link href={`/${locale}/admin`} className="lp-link-btn">
+                {dict.nav.admin}
               </Link>
             )}
           </div>
 
           <div className="dash-nav-account">
+            <LocaleSwitcher />
             {userEmail && <span className="dash-user-email">{userEmail}</span>}
             <button className="lp-link-btn" type="button" onClick={signOut}>
-              Sign out
+              {dict.nav.signOut}
             </button>
           </div>
         </nav>
 
         <section className="card">
-          <h2>Overview</h2>
+          <h2>{t.overviewTitle}</h2>
 
           <div className="stats" style={{ flexWrap: "wrap" }}>
             <div className="stat">
               <strong>{statsLoading ? "—" : prospectStats.prospectsFound}</strong>
-              <span>Prospects Found</span>
+              <span>{t.statProspectsFound}</span>
             </div>
             <div className="stat">
               <strong>{statsLoading ? "—" : prospectStats.qualified}</strong>
-              <span>Qualified</span>
+              <span>{t.statQualified}</span>
             </div>
             <div className="stat">
               <strong>{statsLoading ? "—" : prospectStats.contactsFound}</strong>
-              <span>Contacts Found</span>
+              <span>{t.statContactsFound}</span>
             </div>
             <div className="stat">
               <strong>{statsLoading ? "—" : prospectStats.emailsSent}</strong>
-              <span>Emails Sent</span>
+              <span>{t.statEmailsSent}</span>
             </div>
             <div className="stat">
               <strong>{statsLoading ? "—" : prospectStats.emailsGenerated}</strong>
-              <span>Emails Generated</span>
+              <span>{t.statEmailsGenerated}</span>
             </div>
           </div>
         </section>
 
         <section className="card dash-primary-cta">
-          <h2>Find your next best prospects.</h2>
-          <p className="subtitle">
-            Tell Zappivot who you&apos;re looking for and discover companies
-            that match your ideal customer profile.
-          </p>
-          <Link href="/prospects" className="btn lp-btn-lg">
-            Find Prospects
+          <h2>{t.primaryCtaTitle}</h2>
+          <p className="subtitle">{t.primaryCtaText}</p>
+          <Link href={`/${locale}/prospects`} className="btn lp-btn-lg">
+            {t.primaryCtaButton}
           </Link>
         </section>
 
         <section className="card">
-          <h2>Recent Prospects</h2>
+          <h2>{t.recentProspectsTitle}</h2>
 
           {recentProspects.length === 0 ? (
             <>
               <p className="subtitle" style={{ marginBottom: 4 }}>
-                Your pipeline starts here.
+                {t.emptyPipelineTitle}
               </p>
               <p className="subtitle" style={{ marginBottom: 16 }}>
-                Find your first qualified prospects with Zappivot.
+                {t.emptyPipelineText}
               </p>
-              <Link href="/prospects" className="btn" style={{ display: "inline-block" }}>
-                Find Prospects
+              <Link
+                href={`/${locale}/prospects`}
+                className="btn"
+                style={{ display: "inline-block" }}
+              >
+                {t.emptyPipelineButton}
               </Link>
             </>
           ) : (
@@ -355,7 +357,7 @@ export default function Dashboard() {
                       <strong>{p.company_name}</strong>
                       <span>
                         {[p.location, p.industry].filter(Boolean).join(" · ") ||
-                          "Location/industry unknown"}
+                          "—"}
                       </span>
                     </div>
 
@@ -363,8 +365,8 @@ export default function Dashboard() {
                       <span className={`score-badge ${scoreTier(p.prospect_score)}`}>
                         {p.prospect_score}
                       </span>
-                      <span>{p.decision_maker_name || "No decision maker"}</span>
-                      <span>{emailFound ? "Email found" : "Email not found"}</span>
+                      <span>{p.decision_maker_name || t.noDecisionMaker}</span>
+                      <span>{emailFound ? t.emailFound : t.emailNotFound}</span>
                       <span
                         className={
                           status === "sent"
@@ -375,13 +377,13 @@ export default function Dashboard() {
                         }
                       >
                         {status === "sent"
-                          ? "Sent"
+                          ? t.statusSent
                           : status === "draft"
-                          ? "Draft"
-                          : "Not contacted"}
+                          ? t.statusDraft
+                          : t.statusNotContacted}
                       </span>
-                      <Link href="/prospects" className="lp-link-btn">
-                        View Prospect
+                      <Link href={`/${locale}/prospects`} className="lp-link-btn">
+                        {t.viewProspect}
                       </Link>
                     </div>
                   </div>
@@ -392,7 +394,7 @@ export default function Dashboard() {
         </section>
 
         <section className="card">
-          <h2>Follow-ups</h2>
+          <h2>{t.followUpsTitle}</h2>
 
           <div className="filter-tabs">
             {followUpFilters.map((f) => (
@@ -413,7 +415,7 @@ export default function Dashboard() {
 
           {filteredLeads.length === 0 && (
             <p className="subtitle" style={{ padding: "16px 0" }}>
-              No follow-ups in this filter.
+              {t.noFollowUps}
             </p>
           )}
 
@@ -460,7 +462,7 @@ export default function Dashboard() {
                       deleteLead(lead.id);
                     }}
                   >
-                    Sil
+                    {t.delete}
                   </button>
                 </div>
               </div>
@@ -492,12 +494,12 @@ export default function Dashboard() {
             </div>
 
             <div className="reason">
-              <strong>AI Analizi</strong>
+              <strong>{t.aiAnalysis}</strong>
               <p>{selectedLead.reason}</p>
             </div>
 
             <div className="message-box">
-              <strong>Önerilen Follow-up</strong>
+              <strong>{t.suggestedFollowUp}</strong>
               <p>{selectedLead.message}</p>
 
               <button
@@ -507,12 +509,12 @@ export default function Dashboard() {
                   navigator.clipboard.writeText(selectedLead.message)
                 }
               >
-                Mesajı Kopyala
+                {t.copyMessage}
               </button>
             </div>
 
             <div className="field" style={{ marginTop: 20, marginBottom: 0 }}>
-              <label>Sonraki takip tarihi</label>
+              <label>{t.nextFollowUpDate}</label>
 
               <input
                 type="date"
@@ -531,18 +533,18 @@ export default function Dashboard() {
             className="lp-link-btn"
             onClick={() => setShowManualForm((s) => !s)}
           >
-            {showManualForm ? "− Hide" : "+ Add Prospect Manually"}
+            {showManualForm ? t.hideToggle : t.addManuallyToggle}
           </button>
 
           {showManualForm && (
             <form onSubmit={generate} style={{ marginTop: 20 }}>
               <div className="grid">
                 <div className="field">
-                  <label>Lead adı</label>
+                  <label>{t.fieldName}</label>
 
                   <input
                     required
-                    placeholder="Ahmet Yılmaz"
+                    placeholder={t.namePlaceholder}
                     value={form.name}
                     onChange={(e) =>
                       setForm({
@@ -554,11 +556,11 @@ export default function Dashboard() {
                 </div>
 
                 <div className="field">
-                  <label>Şirket</label>
+                  <label>{t.fieldCompany}</label>
 
                   <input
                     required
-                    placeholder="ABC İnşaat"
+                    placeholder={t.companyPlaceholder}
                     value={form.company}
                     onChange={(e) =>
                       setForm({
@@ -570,11 +572,11 @@ export default function Dashboard() {
                 </div>
 
                 <div className="field full">
-                  <label>İhtiyaç / konuşma özeti</label>
+                  <label>{t.fieldNeed}</label>
 
                   <textarea
                     required
-                    placeholder="Web sitesi yenilemek istiyor..."
+                    placeholder={t.needPlaceholder}
                     value={form.need}
                     onChange={(e) =>
                       setForm({
@@ -586,10 +588,10 @@ export default function Dashboard() {
                 </div>
 
                 <div className="field full">
-                  <label>Ek notlar</label>
+                  <label>{t.fieldNotes}</label>
 
                   <textarea
-                    placeholder="Bütçe, zamanlama, karar verici vb."
+                    placeholder={t.notesPlaceholder}
                     value={form.notes}
                     onChange={(e) =>
                       setForm({
@@ -602,7 +604,7 @@ export default function Dashboard() {
               </div>
 
               <button className="btn" disabled={loading}>
-                {loading ? "Analyzing prospect..." : "Analyze Prospect"}
+                {loading ? t.analyzing : t.analyzeButton}
               </button>
             </form>
           )}

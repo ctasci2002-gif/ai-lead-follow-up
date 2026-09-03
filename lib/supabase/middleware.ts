@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function updateSession(request: NextRequest) {
+export async function updateSession(request: NextRequest, locale: string) {
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -30,23 +30,25 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+  const unprefixed = pathname.replace(new RegExp(`^/${locale}`), "") || "/";
+
   const isProtectedPage =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/prospects") ||
-    pathname.startsWith("/marketing") ||
-    pathname.startsWith("/admin");
+    unprefixed.startsWith("/dashboard") ||
+    unprefixed.startsWith("/prospects") ||
+    unprefixed.startsWith("/marketing") ||
+    unprefixed.startsWith("/admin");
   const isAuthPage =
-    pathname.startsWith("/login") || pathname.startsWith("/register");
+    unprefixed.startsWith("/login") || unprefixed.startsWith("/register");
 
   if (!user && isProtectedPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = `/${locale}/login`;
     return NextResponse.redirect(url);
   }
 
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = `/${locale}/dashboard`;
     return NextResponse.redirect(url);
   }
 

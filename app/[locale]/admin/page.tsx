@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "../../lib/supabase/client";
+import { createClient } from "../../../lib/supabase/client";
+import { useDictionary } from "../../../lib/i18n/DictionaryProvider";
+import { LocaleSwitcher } from "../../../lib/i18n/LocaleSwitcher";
 
 type AdminUser = {
   id: string;
@@ -13,9 +15,14 @@ type AdminUser = {
   email_confirmed_at: string | null;
 };
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null, locale: string) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("tr-TR", {
+  const localeMap: Record<string, string> = {
+    en: "en-GB",
+    tr: "tr-TR",
+    de: "de-DE",
+  };
+  return new Date(value).toLocaleString(localeMap[locale] || "en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
   });
@@ -24,6 +31,9 @@ function formatDate(value: string | null) {
 export default function AdminPage() {
   const router = useRouter();
   const supabase = createClient();
+  const { locale } = useParams<{ locale: string }>();
+  const dict = useDictionary();
+  const t = dict.admin;
 
   const [userEmail, setUserEmail] = useState("");
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -43,17 +53,17 @@ export default function AdminPage() {
         const data = await res.json();
 
         if (res.status === 403) {
-          setError("Bu sayfaya erişim yetkin yok.");
+          setError(t.forbidden);
           return;
         }
 
         if (!res.ok) {
-          throw new Error(data.error || "Bir hata oluştu.");
+          throw new Error(data.error || t.genericError);
         }
 
         setUsers(data.users as AdminUser[]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+        setError(err instanceof Error ? err.message : t.genericError);
       } finally {
         setLoading(false);
       }
@@ -64,7 +74,7 @@ export default function AdminPage() {
 
   async function signOut() {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push(`/${locale}/login`);
     router.refresh();
   }
 
@@ -73,20 +83,17 @@ export default function AdminPage() {
       <div className="container">
         <div className="topbar">
           <div>
-            <span className="badge">Zappivot · Admin</span>
+            <span className="badge">{t.badge}</span>
             <h1 className="title" style={{ fontSize: 32 }}>
-              Kayıtlı Kullanıcılar
+              {t.title}
             </h1>
-            <p className="subtitle">
-              Supabase Authentication üzerinden hesap oluşturan tüm
-              kullanıcılar.
-            </p>
+            <p className="subtitle">{t.subtitle}</p>
           </div>
 
           <div className="stats">
             <div className="stat">
               <strong>{users.length}</strong>
-              <span>Toplam Hesap</span>
+              <span>{t.statTotalAccounts}</span>
             </div>
           </div>
         </div>
@@ -100,28 +107,30 @@ export default function AdminPage() {
             marginBottom: 20,
           }}
         >
+          <LocaleSwitcher />
+
           {userEmail && (
             <span className="subtitle" style={{ margin: 0 }}>
               {userEmail}
             </span>
           )}
 
-          <Link href="/dashboard" className="lp-link-btn">
-            ← Dashboard
+          <Link href={`/${locale}/dashboard`} className="lp-link-btn">
+            {t.backToDashboard}
           </Link>
 
           <button className="btn" type="button" onClick={signOut}>
-            Çıkış yap
+            {t.signOut}
           </button>
         </div>
 
         <section className="card">
-          {loading && <p className="subtitle">Yükleniyor...</p>}
+          {loading && <p className="subtitle">{t.loading}</p>}
 
           {!loading && error && <p className="error">{error}</p>}
 
           {!loading && !error && users.length === 0 && (
-            <p className="subtitle">Henüz kayıtlı kullanıcı yok.</p>
+            <p className="subtitle">{t.noUsers}</p>
           )}
 
           {!loading && !error && users.length > 0 && (
@@ -129,24 +138,24 @@ export default function AdminPage() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>E-posta</th>
-                    <th>Kayıt Tarihi</th>
-                    <th>Son Giriş</th>
-                    <th>Doğrulama</th>
+                    <th>{t.colEmail}</th>
+                    <th>{t.colCreated}</th>
+                    <th>{t.colLastSignIn}</th>
+                    <th>{t.colVerification}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
                     <tr key={u.id}>
                       <td>{u.email || "—"}</td>
-                      <td>{formatDate(u.created_at)}</td>
-                      <td>{formatDate(u.last_sign_in_at)}</td>
+                      <td>{formatDate(u.created_at, locale)}</td>
+                      <td>{formatDate(u.last_sign_in_at, locale)}</td>
                       <td>
                         {u.email_confirmed_at ? (
-                          <span className="followup-badge">Doğrulandı</span>
+                          <span className="followup-badge">{t.verified}</span>
                         ) : (
                           <span className="followup-badge overdue">
-                            Bekliyor
+                            {t.pending}
                           </span>
                         )}
                       </td>

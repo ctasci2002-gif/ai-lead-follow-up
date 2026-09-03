@@ -396,6 +396,35 @@ button {
   color: #f8fafc;
 }
 
+/* Locale switcher */
+
+.locale-switcher {
+  display: flex;
+  gap: 2px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.locale-switcher-btn {
+  background: transparent;
+  border: 0;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+
+.locale-switcher-btn.active {
+  background: #f8fafc;
+  color: #0b1020;
+}
+
+.locale-switcher-btn:hover:not(.active) {
+  color: #f8fafc;
+}
+
 /* Auth */
 
 .btn-google {

@@ -1,14 +1,19 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "../../lib/supabase/client";
+import { useRouter, useParams } from "next/navigation";
+import { createClient } from "../../../lib/supabase/client";
+import { useDictionary } from "../../../lib/i18n/DictionaryProvider";
+import { LocaleSwitcher } from "../../../lib/i18n/LocaleSwitcher";
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
+  const { locale } = useParams<{ locale: string }>();
+  const dict = useDictionary();
+  const t = dict.auth;
 
-  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -48,7 +53,7 @@ export default function RegisterPage() {
 
         if (error) throw error;
 
-        router.push("/dashboard");
+        router.push(`/${locale}/dashboard`);
         router.refresh();
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -59,17 +64,15 @@ export default function RegisterPage() {
         if (error) throw error;
 
         if (data.session) {
-          setInfo("Hesap oluşturuldu. Giriş yapılıyor...");
-          router.push("/dashboard");
+          setInfo(t.signupSuccessSession);
+          router.push(`/${locale}/dashboard`);
           router.refresh();
         } else {
-          setInfo(
-            "Hesap oluşturuldu. Giriş yapabilmek için e-postana gelen doğrulama linkine tıkla."
-          );
+          setInfo(t.signupSuccessConfirm);
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+      setError(err instanceof Error ? err.message : t.genericError);
     } finally {
       setLoading(false);
     }
@@ -80,14 +83,13 @@ export default function RegisterPage() {
       <div className="container" style={{ maxWidth: 420 }}>
         <div className="topbar">
           <div>
-            <span className="badge">AI Lead Follow-Up · MVP</span>
+            <span className="badge">{t.badge}</span>
             <h1 className="title" style={{ fontSize: 32 }}>
-              {mode === "signup" ? "Ücretsiz başla" : "Giriş yap"}
+              {mode === "signin" ? t.loginTitle : t.registerTitle}
             </h1>
-            <p className="subtitle">
-              Lead dashboard'una erişmek için hesap oluştur.
-            </p>
+            <p className="subtitle">{t.loginSubtitle}</p>
           </div>
+          <LocaleSwitcher />
         </div>
 
         <section className="card">
@@ -115,27 +117,27 @@ export default function RegisterPage() {
                 d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
               />
             </svg>
-            {googleLoading ? "Yönlendiriliyor..." : "Google ile giriş yap"}
+            {googleLoading ? t.googleRedirecting : t.google}
           </button>
 
           <div className="auth-divider">
-            <span>veya</span>
+            <span>{t.or}</span>
           </div>
 
           <form onSubmit={submit}>
             <div className="field">
-              <label>E-posta</label>
+              <label>{t.email}</label>
               <input
                 required
                 type="email"
-                placeholder="ornek@sirket.com"
+                placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
             <div className="field">
-              <label>Şifre</label>
+              <label>{t.password}</label>
               <input
                 required
                 type="password"
@@ -148,10 +150,10 @@ export default function RegisterPage() {
 
             <button className="btn" disabled={loading}>
               {loading
-                ? "İşleniyor..."
-                : mode === "signup"
-                ? "Hesap oluştur"
-                : "Giriş yap"}
+                ? t.submitting
+                : mode === "signin"
+                ? t.submitLogin
+                : t.submitRegister}
             </button>
           </form>
 
@@ -159,23 +161,9 @@ export default function RegisterPage() {
           {info && <p className="subtitle">{info}</p>}
 
           <p className="subtitle" style={{ marginTop: 16 }}>
-            {mode === "signup" ? (
+            {mode === "signin" ? (
               <>
-                Zaten hesabın var mı?{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMode("signin");
-                    setError("");
-                  }}
-                >
-                  Giriş yap
-                </a>
-              </>
-            ) : (
-              <>
-                Hesabın yok mu?{" "}
+                {t.noAccount}{" "}
                 <a
                   href="#"
                   onClick={(e) => {
@@ -184,7 +172,21 @@ export default function RegisterPage() {
                     setError("");
                   }}
                 >
-                  Hesap oluştur
+                  {t.submitRegister}
+                </a>
+              </>
+            ) : (
+              <>
+                {t.hasAccount}{" "}
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMode("signin");
+                    setError("");
+                  }}
+                >
+                  {t.submitLogin}
                 </a>
               </>
             )}

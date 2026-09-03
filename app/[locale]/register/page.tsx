@@ -1,14 +1,19 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "../../lib/supabase/client";
+import { useRouter, useParams } from "next/navigation";
+import { createClient } from "../../../lib/supabase/client";
+import { useDictionary } from "../../../lib/i18n/DictionaryProvider";
+import { LocaleSwitcher } from "../../../lib/i18n/LocaleSwitcher";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
   const supabase = createClient();
+  const { locale } = useParams<{ locale: string }>();
+  const dict = useDictionary();
+  const t = dict.auth;
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">("signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -48,7 +53,7 @@ export default function LoginPage() {
 
         if (error) throw error;
 
-        router.push("/dashboard");
+        router.push(`/${locale}/dashboard`);
         router.refresh();
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -59,21 +64,15 @@ export default function LoginPage() {
         if (error) throw error;
 
         if (data.session) {
-          setInfo("Hesap oluşturuldu. Giriş yapılıyor...");
-          router.push("/dashboard");
+          setInfo(t.signupSuccessSession);
+          router.push(`/${locale}/dashboard`);
           router.refresh();
         } else {
-          // Supabase's "Confirm email" setting is on — signUp succeeds but
-          // returns no session. Navigating away here would just bounce the
-          // user straight back to /login via middleware before they ever
-          // see this message, so stay put and tell them to check email.
-          setInfo(
-            "Hesap oluşturuldu. Giriş yapabilmek için e-postana gelen doğrulama linkine tıkla."
-          );
+          setInfo(t.signupSuccessConfirm);
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
+      setError(err instanceof Error ? err.message : t.genericError);
     } finally {
       setLoading(false);
     }
@@ -84,14 +83,13 @@ export default function LoginPage() {
       <div className="container" style={{ maxWidth: 420 }}>
         <div className="topbar">
           <div>
-            <span className="badge">AI Lead Follow-Up · MVP</span>
+            <span className="badge">{t.badge}</span>
             <h1 className="title" style={{ fontSize: 32 }}>
-              {mode === "signin" ? "Giriş yap" : "Hesap oluştur"}
+              {mode === "signup" ? t.registerTitle : t.loginTitle}
             </h1>
-            <p className="subtitle">
-              Lead dashboard'una erişmek için giriş yap.
-            </p>
+            <p className="subtitle">{t.registerSubtitle}</p>
           </div>
+          <LocaleSwitcher />
         </div>
 
         <section className="card">
@@ -119,27 +117,27 @@ export default function LoginPage() {
                 d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
               />
             </svg>
-            {googleLoading ? "Yönlendiriliyor..." : "Google ile giriş yap"}
+            {googleLoading ? t.googleRedirecting : t.google}
           </button>
 
           <div className="auth-divider">
-            <span>veya</span>
+            <span>{t.or}</span>
           </div>
 
           <form onSubmit={submit}>
             <div className="field">
-              <label>E-posta</label>
+              <label>{t.email}</label>
               <input
                 required
                 type="email"
-                placeholder="ornek@sirket.com"
+                placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
 
             <div className="field">
-              <label>Şifre</label>
+              <label>{t.password}</label>
               <input
                 required
                 type="password"
@@ -152,10 +150,10 @@ export default function LoginPage() {
 
             <button className="btn" disabled={loading}>
               {loading
-                ? "İşleniyor..."
-                : mode === "signin"
-                ? "Giriş yap"
-                : "Hesap oluştur"}
+                ? t.submitting
+                : mode === "signup"
+                ? t.submitRegister
+                : t.submitLogin}
             </button>
           </form>
 
@@ -163,23 +161,9 @@ export default function LoginPage() {
           {info && <p className="subtitle">{info}</p>}
 
           <p className="subtitle" style={{ marginTop: 16 }}>
-            {mode === "signin" ? (
+            {mode === "signup" ? (
               <>
-                Hesabın yok mu?{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMode("signup");
-                    setError("");
-                  }}
-                >
-                  Hesap oluştur
-                </a>
-              </>
-            ) : (
-              <>
-                Zaten hesabın var mı?{" "}
+                {t.hasAccount}{" "}
                 <a
                   href="#"
                   onClick={(e) => {
@@ -188,7 +172,21 @@ export default function LoginPage() {
                     setError("");
                   }}
                 >
-                  Giriş yap
+                  {t.submitLogin}
+                </a>
+              </>
+            ) : (
+              <>
+                {t.noAccount}{" "}
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMode("signup");
+                    setError("");
+                  }}
+                >
+                  {t.submitRegister}
                 </a>
               </>
             )}
