@@ -260,10 +260,26 @@ return_prospects tool'unu çağırarak sonucu döndür.
     ],
   });
 
+  console.log(
+    "[prospects] Claude stop_reason:",
+    response.stop_reason,
+    "| content block types:",
+    response.content.map((b) => b.type)
+  );
+
   const toolUse = response.content.find(
     (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
   );
 
+  if (!toolUse) {
+    console.log("[prospects] no tool_use block found, full content:", JSON.stringify(response.content).slice(0, 2000));
+  }
+
   const parsed = (toolUse?.input as { prospects?: unknown })?.prospects;
+
+  if (toolUse && !Array.isArray(parsed)) {
+    console.log("[prospects] tool_use.input did not contain a prospects array:", JSON.stringify(toolUse.input).slice(0, 2000));
+  }
+
   return Array.isArray(parsed) ? (parsed as AnalyzedProspect[]) : [];
 }
