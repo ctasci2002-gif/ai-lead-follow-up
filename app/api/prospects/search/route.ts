@@ -21,6 +21,33 @@ function clampString(value: unknown, maxLen: number) {
   return value.trim().slice(0, maxLen);
 }
 
+export async function GET() {
+  try {
+    const supabase = await createRouteClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return Response.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { count: usedToday, error: countError } = await supabase
+      .from("prospects")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", todayStartIso());
+
+    if (countError) throw countError;
+
+    return Response.json({ used: usedToday || 0, limit: DAILY_LIMIT });
+  } catch (error) {
+    console.error(error);
+    return Response.json({ error: "Kota bilgisi alınamadı." }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createRouteClient();

@@ -44,6 +44,15 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [followUpFilter, setFollowUpFilter] = useState<FollowUpFilter>("all");
 
+  const [prospectStats, setProspectStats] = useState({
+    prospectsFound: 0,
+    qualified: 0,
+    contactsFound: 0,
+    emailsGenerated: 0,
+    emailsSent: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
   useEffect(() => {
     async function load() {
       const {
@@ -60,6 +69,27 @@ export default function Dashboard() {
       if (data) {
         setLeads(data as Lead[]);
       }
+
+      const { data: prospects } = await supabase
+        .from("prospects")
+        .select("prospect_score, decision_maker_email, company_email");
+
+      const { data: messages } = await supabase
+        .from("outreach_messages")
+        .select("status");
+
+      setProspectStats({
+        prospectsFound: prospects?.length || 0,
+        qualified:
+          prospects?.filter((p) => p.prospect_score >= 60).length || 0,
+        contactsFound:
+          prospects?.filter((p) => p.decision_maker_email || p.company_email)
+            .length || 0,
+        emailsGenerated: messages?.length || 0,
+        emailsSent:
+          messages?.filter((m) => m.status === "sent").length || 0,
+      });
+      setStatsLoading(false);
     }
 
     load();
@@ -248,6 +278,44 @@ export default function Dashboard() {
             Çıkış yap
           </button>
         </div>
+
+        <section className="card">
+          <h2>🔍 Prospecting</h2>
+
+          {!statsLoading && prospectStats.prospectsFound === 0 ? (
+            <>
+              <p className="subtitle" style={{ marginBottom: 16 }}>
+                Henüz hiç prospect bulmadın.
+              </p>
+              <Link href="/prospects" className="btn" style={{ display: "inline-block" }}>
+                Find Your First Prospects
+              </Link>
+            </>
+          ) : (
+            <div className="stats" style={{ flexWrap: "wrap" }}>
+              <div className="stat">
+                <strong>{prospectStats.prospectsFound}</strong>
+                <span>Prospects Found</span>
+              </div>
+              <div className="stat">
+                <strong>{prospectStats.qualified}</strong>
+                <span>Qualified</span>
+              </div>
+              <div className="stat">
+                <strong>{prospectStats.contactsFound}</strong>
+                <span>Contacts Found</span>
+              </div>
+              <div className="stat">
+                <strong>{prospectStats.emailsGenerated}</strong>
+                <span>Emails Generated</span>
+              </div>
+              <div className="stat">
+                <strong>{prospectStats.emailsSent}</strong>
+                <span>Emails Sent</span>
+              </div>
+            </div>
+          )}
+        </section>
 
         {dueLeads.length > 0 && (
           <section className="card result-card">

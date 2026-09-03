@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
+import { qualificationChips } from "../../lib/qualification";
 
 type Prospect = {
   id: string;
@@ -51,10 +52,26 @@ export default function MarketingPage() {
   const [followUpSetId, setFollowUpSetId] = useState<Record<string, boolean>>({});
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sendQuota, setSendQuota] = useState<{ used: number; limit: number } | null>(
+    null
+  );
 
   useEffect(() => {
     load();
+    refreshQuota();
   }, []);
+
+  async function refreshQuota() {
+    try {
+      const res = await fetch("/api/marketing/send");
+      if (res.ok) {
+        const data = await res.json();
+        setSendQuota({ used: data.used, limit: data.limit });
+      }
+    } catch {
+      // quota display is best-effort; the server still enforces the real limit
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -146,6 +163,7 @@ export default function MarketingPage() {
       if (!res.ok) throw new Error(data.error || "Bir hata oluştu.");
 
       setDrafts((prev) => ({ ...prev, [prospectId]: data.outreachMessage }));
+      refreshQuota();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu.");
     } finally {
@@ -220,9 +238,22 @@ export default function MarketingPage() {
           </div>
         </div>
 
+        <div className="qual-chips">
+          {qualificationChips(p).map((c) => (
+            <span
+              key={c.label}
+              className={
+                c.ok === true ? "qual-chip ok" : c.ok === false ? "qual-chip bad" : "qual-chip neutral"
+              }
+            >
+              {c.label}
+            </span>
+          ))}
+        </div>
+
         <div className="temperature">
           Company Size: {p.company_size || "Unknown"}
-          {p.size_source ? (
+          {p.size_source && (
             <>
               {" "}
               ·{" "}
@@ -230,8 +261,6 @@ export default function MarketingPage() {
                 Size Source
               </a>
             </>
-          ) : (
-            " (Unverified)"
           )}
         </div>
 
@@ -431,10 +460,19 @@ export default function MarketingPage() {
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: 20,
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
+          {sendQuota && (
+            <span className="subtitle" style={{ margin: 0 }}>
+              {sendQuota.used} / {sendQuota.limit} emails sent today
+            </span>
+          )}
+
           <Link href="/dashboard" className="lp-link-btn">
             ← Dashboard'a dön
           </Link>

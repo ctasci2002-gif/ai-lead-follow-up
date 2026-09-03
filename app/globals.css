@@ -282,6 +282,39 @@ button {
   color: #94a3b8;
 }
 
+.qual-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.qual-chip {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #334155;
+  color: #94a3b8;
+}
+
+.qual-chip.ok {
+  color: #a5b4fc;
+  border-color: rgba(129, 140, 248, 0.4);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.qual-chip.bad {
+  color: #fca5a5;
+  border-color: #7f1d1d;
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.qual-chip.neutral {
+  color: #64748b;
+}
+
 .filter-tabs {
   display: flex;
   flex-wrap: wrap;

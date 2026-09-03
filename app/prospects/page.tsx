@@ -1,8 +1,9 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
+import { qualificationChips } from "../../lib/qualification";
 
 type Prospect = {
   id: string;
@@ -26,9 +27,9 @@ type Prospect = {
 type ScoreFilter = "all" | "high" | "medium" | "low";
 
 const loadingStages = [
-  "Prospectler aranıyor...",
-  "Şirketler analiz ediliyor...",
-  "AI fırsatları değerlendiriyor...",
+  "Finding companies...",
+  "Analyzing prospects...",
+  "Qualifying results...",
 ];
 
 function temperatureFor(score: number) {
@@ -54,6 +55,19 @@ export default function ProspectsPage() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [scoreFilter, setScoreFilter] = useState<ScoreFilter>("all");
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [quota, setQuota] = useState<{ used: number; limit: number } | null>(
+    null
+  );
+  const [lastSearch, setLastSearch] = useState({ industry: "", location: "" });
+
+  useEffect(() => {
+    fetch("/api/prospects/search")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setQuota({ used: data.used, limit: data.limit });
+      })
+      .catch(() => {});
+  }, []);
 
   async function search(e: FormEvent) {
     e.preventDefault();
@@ -81,6 +95,7 @@ export default function ProspectsPage() {
       }
 
       setProspects(data.prospects || []);
+      setLastSearch({ industry: form.industry, location: form.location });
 
       if (!data.prospects || data.prospects.length === 0) {
         setError("Bu kriterlerle uygun prospect bulunamadı.");
@@ -90,6 +105,13 @@ export default function ProspectsPage() {
     } finally {
       stageTimers.forEach(clearTimeout);
       setLoading(false);
+
+      fetch("/api/prospects/search")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) setQuota({ used: data.used, limit: data.limit });
+        })
+        .catch(() => {});
     }
   }
 
@@ -126,10 +148,10 @@ export default function ProspectsPage() {
         <div className="topbar">
           <div>
             <span className="badge">AI Prospect Finder</span>
-            <h1 className="title">Yeni Müşteriler Bul</h1>
+            <h1 className="title">Find Your Next Best Client</h1>
             <p className="subtitle">
-              Satış yapmak istediğin şirketleri bul, AI ile analiz et ve
-              outreach'e hazır hale getir.
+              Discover qualified companies that match your ideal customer
+              profile.
             </p>
           </div>
         </div>
@@ -137,10 +159,19 @@ export default function ProspectsPage() {
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
+            alignItems: "center",
             marginBottom: 20,
+            gap: 12,
+            flexWrap: "wrap",
           }}
         >
+          {quota && (
+            <span className="subtitle" style={{ margin: 0 }}>
+              {quota.used} / {quota.limit} prospects used today
+            </span>
+          )}
+
           <Link href="/dashboard" className="lp-link-btn">
             ← Dashboard'a dön
           </Link>
@@ -215,7 +246,7 @@ export default function ProspectsPage() {
             </div>
 
             <button className="btn" disabled={loading}>
-              {loading ? loadingStages[loadingStage] : "Prospect Bul"}
+              {loading ? loadingStages[loadingStage] : "Find Prospects"}
             </button>
           </form>
 
@@ -262,9 +293,26 @@ export default function ProspectsPage() {
               </div>
             </div>
 
+            <div className="qual-chips">
+              {qualificationChips(p, lastSearch).map((c) => (
+                <span
+                  key={c.label}
+                  className={
+                    c.ok === true
+                      ? "qual-chip ok"
+                      : c.ok === false
+                      ? "qual-chip bad"
+                      : "qual-chip neutral"
+                  }
+                >
+                  {c.label}
+                </span>
+              ))}
+            </div>
+
             <div className="temperature">
               Company Size: {p.company_size || "Unknown"}
-              {p.size_source ? (
+              {p.size_source && (
                 <>
                   {" "}
                   ·{" "}
@@ -277,17 +325,17 @@ export default function ProspectsPage() {
                     Size Source
                   </a>
                 </>
-              ) : (
-                " (Unverified)"
               )}
             </div>
 
-            {p.decision_maker_name && (
-              <div className="temperature">
-                Decision Maker: {p.decision_maker_name}
-                {p.decision_maker_role ? ` — ${p.decision_maker_role}` : ""}
-              </div>
-            )}
+            <div className="temperature">
+              Decision Maker:{" "}
+              {p.decision_maker_name
+                ? `${p.decision_maker_name}${
+                    p.decision_maker_role ? ` — ${p.decision_maker_role}` : ""
+                  }`
+                : "Not found"}
+            </div>
 
             <div className="temperature">
               Recipient Email:{" "}
