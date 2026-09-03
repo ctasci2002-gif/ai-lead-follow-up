@@ -13,7 +13,7 @@ Set these in `.env.local` (never commit this file):
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key | safe to expose client-side, scoped by RLS |
 | `SUPABASE_SERVICE_ROLE_KEY` | Daily reminder job (reads across all users, bypassing RLS) | **server-only, never expose to the client** |
 | `RESEND_API_KEY` | Sending reminder emails via [Resend](https://resend.com) | server-only |
-| `EMAIL_FROM` | Optional sender address, e.g. `AI Lead Follow-Up <you@yourdomain.com>` | defaults to Resend's sandbox sender `onboarding@resend.dev` if unset |
+| `EMAIL_FROM` | Sender address | set to `Zappivot <hello@contact.zappivot.com>` — `contact.zappivot.com` is a verified sending subdomain in Resend (DKIM/SPF/DMARC configured at the DNS provider), so this is not limited to Resend's sandbox restrictions. Defaults to `onboarding@resend.dev` if unset. |
 | `CRON_SECRET` | Shared secret that protects `/api/send-daily-reminders` from being triggered by anyone else | any random string |
 | `TAVILY_API_KEY` | Web search for AI Prospect Finder ([tavily.com](https://tavily.com)) | server-only |
 

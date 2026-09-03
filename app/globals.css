@@ -1,3 +1,9 @@
+:root {
+  --accent: #6366f1;
+  --accent-soft: rgba(99, 102, 241, 0.14);
+  --accent-strong: #818cf8;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -743,5 +749,367 @@ button {
 
   .lp-cta {
     padding: 56px 20px;
+  }
+}
+
+/* Landing page — Zappivot v2 sections */
+
+.lp-hero {
+  position: relative;
+}
+
+.lp-hero::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 500px;
+  background: radial-gradient(
+    ellipse at center,
+    var(--accent-soft) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: -1;
+}
+
+.lp-nav-links a:hover,
+.lp-link-btn:hover {
+  color: var(--accent-strong);
+}
+
+.btn {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px -8px rgba(99, 102, 241, 0.35);
+}
+
+.lp-social-proof {
+  border-top: 1px solid #263244;
+  border-bottom: 1px solid #263244;
+  padding: 22px 24px;
+  text-align: center;
+}
+
+.lp-social-proof p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+}
+
+.lp-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.lp-grid-5 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.lp-card:hover .lp-icon {
+  color: var(--accent-strong);
+}
+
+/* Compact prospect mockup (hero) */
+
+.lp-prospect-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.lp-prospect-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid #263244;
+}
+
+.lp-prospect-row:last-child {
+  border-bottom: 0;
+}
+
+.lp-prospect-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.lp-prospect-main strong {
+  font-size: 15px;
+}
+
+.lp-prospect-main span {
+  color: #94a3b8;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.score-badge.high {
+  color: #a5b4fc;
+  background: var(--accent-soft);
+  border-color: rgba(129, 140, 248, 0.35);
+}
+
+.score-badge.medium {
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.1);
+  border-color: #78350f;
+}
+
+.score-badge.low {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.08);
+  border-color: #334155;
+}
+
+/* Prospect detail mockup (dashboard preview) */
+
+.lp-detail-mockup {
+  width: 100%;
+  max-width: 680px;
+  background: #111827;
+  border: 1px solid #334155;
+  border-radius: 22px;
+  padding: 32px;
+  box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.6);
+}
+
+.lp-detail-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.lp-detail-header h3 {
+  margin: 10px 0 0;
+  font-size: 24px;
+}
+
+.lp-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  padding: 20px 0;
+  border-top: 1px solid #263244;
+  border-bottom: 1px solid #263244;
+  margin-bottom: 24px;
+}
+
+.lp-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lp-detail-field span {
+  color: #64748b;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lp-detail-field strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.lp-detail-field-wide {
+  grid-column: 1 / -1;
+}
+
+.lp-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.lp-detail-action {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lp-detail-action-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #f8fafc;
+}
+
+/* Workflow steps */
+
+.lp-step-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.lp-step-icon .lp-icon {
+  margin-bottom: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--accent-strong);
+}
+
+/* AI Marketing Agent feature pills */
+
+.lp-agent-header {
+  text-align: center;
+}
+
+.lp-agent-feature {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #111827;
+  border: 1px solid #263244;
+  border-radius: 14px;
+  padding: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.lp-agent-feature .lp-icon {
+  margin-bottom: 0;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: var(--accent-strong);
+}
+
+/* Pricing */
+
+.lp-pricing-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.lp-pricing-tagline {
+  color: #94a3b8;
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.lp-pricing-price {
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 20px;
+  color: #f8fafc;
+}
+
+.lp-pricing-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-pricing-features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+.lp-pricing-features .lp-icon {
+  margin-bottom: 0;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--accent-strong);
+}
+
+.lp-pricing-cta {
+  margin-top: auto;
+  text-align: center;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+}
+
+.lp-pricing-cta:hover {
+  border-color: var(--accent-strong);
+}
+
+/* FAQ */
+
+.lp-faq-list {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.lp-faq-item {
+  padding: 24px 0;
+  border-bottom: 1px solid #263244;
+}
+
+.lp-faq-item:last-child {
+  border-bottom: 0;
+}
+
+.lp-faq-item h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.lp-faq-item p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+@media (max-width: 700px) {
+  .lp-detail-mockup {
+    padding: 22px;
+  }
+
+  .lp-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lp-detail-header h3 {
+    font-size: 20px;
   }
 }
